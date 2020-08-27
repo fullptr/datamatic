@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from . import definitions
+
 header = """
 #include "Loader.h"
 #include "Log.h"
@@ -7,6 +9,7 @@ header = """
 #include "Maths.h"
 #include "Yaml.h"
 #include "Scene.h"
+#include "Updater.h"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -19,6 +22,9 @@ void Save(const std::string& file, std::shared_ptr<Scene> scene)
 {
     YAML::Emitter out;
     out << YAML::BeginMap;
+"""
+
+middle0 = """
     out << YAML::Key << "Entities" << YAML::BeginSeq;
     scene->All([&](Entity& entity) {
         if (entity.Has<TemporaryComponent>()) { return; }
@@ -45,6 +51,7 @@ void Load(const std::string& file, std::shared_ptr<Scene> scene)
     sstream << stream.rdbuf();
 
     YAML::Node data = YAML::Load(sstream.str());
+    UpdateScene(data);
     if (!data["Entities"]) {
         return; // TODO: Error checking
     }
@@ -102,6 +109,8 @@ def write_deserialiser(component, enums):
         if attr.get("Savable", True):
             if attr["Type"] in enums:
                 out += f'            c.{attr_name} = static_cast<{attr_type}>(spec["{attr_name}"].as<int>());\n'
+            elif "Default" in attr:
+                out += f'            c.{attr_name} = spec["{attr_name}"] ? spec["{attr_name}"].as<{attr_type}>() : {definitions.default_cpp_repr(attr_type, attr["Default"])};\n'
             else:
                 out += f'            c.{attr_name} = spec["{attr_name}"].as<{attr_type}>();\n'
     out += f'            e.Add(c);\n'
@@ -116,8 +125,11 @@ def write_copy(component):
     return out
 
 def generate(spec, output):
+    version = spec.get("Version", 0)
     out = f"// GENERATED FILE @ {datetime.now()}"
     out += header
+    out += f'    out << YAML::Key << "Version" << YAML::Value << {version};'
+    out += middle0
     for component in spec["Components"]:
         out += write_serialiser(component, spec["Enums"])
     out += middle1
