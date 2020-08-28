@@ -65,15 +65,20 @@ middle2 = """
     }
 }
 
-void Copy(std::shared_ptr<Scene> source, std::shared_ptr<Scene> target)
+Entity Copy(std::shared_ptr<Scene> scene, Entity entity)
 {
-    target->Clear();
-
-    source->All([&](Entity& entity) {
-        Entity e = target->NewEntity();
+    Entity e = scene->NewEntity();
 """
 
 footer = """
+    return e;
+}
+
+void Copy(std::shared_ptr<Scene> source, std::shared_ptr<Scene> target)
+{
+    target->Clear();
+    source->All([&](Entity& entity) {
+        Copy(target, entity);
     });
 }
 
@@ -119,9 +124,9 @@ def write_deserialiser(component, enums):
 
 def write_copy(component):
     name = component["Name"]
-    out = f"        if (entity.Has<{name}>()) {{\n"
-    out += f"            e.Add<{name}>(entity.Get<{name}>());\n"
-    out += "        }\n"
+    out = f"    if (entity.Has<{name}>()) {{\n"
+    out += f"        e.Add<{name}>(entity.Get<{name}>());\n"
+    out += "    }\n"
     return out
 
 def generate(spec, output):

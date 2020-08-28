@@ -34,6 +34,7 @@ transform = """
             ImGui::PushID(1000000);
             ImGui::DragFloat3("Position", &c.position.x, 0.1f);
             ImGuiXtra::Euler("Orientation", &c.orientation);
+            ImGui::DragFloat3("Scale", &c.scale.x, 0.1f);
             ImGuiXtra::GuizmoSettings(mode, coords);
             if (ImGui::Button("Delete")) { entity.Remove<TransformComponent>(); }
             ImGui::PopID();
@@ -41,7 +42,7 @@ transform = """
 
         if (!editor.IsGameRunning()) {
             auto& camera = editor.GetEditorCamera();
-            auto tr = Maths::Transform(c.position, c.orientation);
+            auto tr = Maths::Transform(c.position, c.orientation, c.scale);
             ImGuizmo::Manipulate(
                 Maths::Cast(camera.View()),
                 Maths::Cast(camera.Proj()),
@@ -49,9 +50,7 @@ transform = """
                 GetCoords(coords),
                 Maths::Cast(tr)
             );
-            c.position = Maths::GetTranslation(tr);
-            c.orientation = Maths::ToQuat(Maths::mat3(tr));
-            Maths::Normalise(c.orientation);
+            Maths::Decompose(tr, &c.position, &c.orientation, &c.scale);
         }
     }
 """
@@ -65,6 +64,10 @@ footer = """
         ImGui::EndMenu();
     }
     ImGui::Separator();
+    if (ImGui::Button("Duplicate")) {
+        Entity copy = Loader::Copy(editor.GetScene(), entity);
+        editor.SetSelected(copy);
+    }
     if (ImGui::Button("Delete Entity")) {
         entity.Kill();
         editor.ClearSelected();
