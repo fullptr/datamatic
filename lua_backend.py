@@ -8,8 +8,21 @@ header = """
 #include "Components.h"
 
 #include <lua.hpp>
+#include <cassert>
 
 namespace Sprocket {
+namespace {
+
+template<typename T> int Lua_Has(lua_State* L)
+{
+    if (!CheckArgCount(L, 1)) { return luaL_error(L, "Bad number of args"); }
+
+    Entity entity = *static_cast<Entity*>(lua_touserdata(L, 1));
+    lua_pushboolean(L, entity.Has<T>());
+    return 1;
+}
+
+}
 
 void RegisterComponentFunctions(lua_State* L)
 {
@@ -51,7 +64,8 @@ def generate_header(spec, output):
             continue
         name = component["Name"]
         out += f"int Get{name}(lua_State* L);\n"
-        out += f"int Set{name}(lua_State* L);\n\n"
+        out += f"int Set{name}(lua_State* L);\n"
+        out += f"int Add{name}(lua_State* L);\n\n"
     out += "}\n}"
 
     with open(output, "w") as outfile:
@@ -65,7 +79,9 @@ def generate_cpp(spec, output):
             continue
         name = component["Name"]
         out += f'    lua_register(L, "Lua_Get{name}", &Lua::Get{name});\n'
-        out += f'    lua_register(L, "Lua_Set{name}", &Lua::Set{name});\n\n'
+        out += f'    lua_register(L, "Lua_Set{name}", &Lua::Set{name});\n'
+        out += f'    lua_register(L, "Lua_Add{name}", &Lua::Add{name});\n'
+        out += f'    lua_register(L, "Has{name}", &Lua_Has<{name}>);\n\n'
     out += middle
     for component in spec["Components"]:
         name = component["Name"]
@@ -89,9 +105,10 @@ def generate_cpp(spec, output):
         
         # Getter
         out += f"int Get{name}(lua_State* L)\n{{\n"
-        out += '    if (!CheckArgCount(L, 0)) { return luaL_error(L, "Bad number of args"); }\n'
-        out += f'    assert(GetEntity(L)->Has<{name}>());\n\n'
-        out += f'    const auto& c = GetEntity(L)->Get<{name}>();\n'
+        out += '    if (!CheckArgCount(L, 1)) { return luaL_error(L, "Bad number of args"); }\n'
+        out += f'    Entity e = *static_cast<Entity*>(lua_touserdata(L, 1));\n'
+        out += f'    assert(e.Has<{name}>());\n\n'
+        out += f'    const auto& c = e.Get<{name}>();\n'
 
         count = 1
         for attr in attrs:
@@ -117,9 +134,10 @@ def generate_cpp(spec, output):
 
         # Setter
         out += f"int Set{name}(lua_State* L)\n{{\n"
-        out += f'    if (!CheckArgCount(L, {num_attrs})) {{ return luaL_error(L, "Bad number of args"); }}\n\n'
-        out += f'    auto& c = GetEntity(L)->Get<{name}>();\n'
-        count = 1
+        out += f'    if (!CheckArgCount(L, {num_attrs + 1})) {{ return luaL_error(L, "Bad number of args"); }}\n\n'
+        out += f'    Entity e = *static_cast<Entity*>(lua_touserdata(L, 1));\n'
+        out += f'    auto& c = e.Get<{name}>();\n'
+        count = 2
         for attr in attrs:
             if not attr.get("Scriptable", True):
                 continue
@@ -137,6 +155,34 @@ def generate_cpp(spec, output):
             else:
                 out += f'    c.{attr["Name"]} = ({attr["Type"]}){get_lua_tofunc(attr)}(L, {count});\n'
                 count += 1
+        out += "    return 0;\n"
+        out += "}\n\n"
+
+        #Adder
+        out += f"int Add{name}(lua_State* L)\n{{\n"
+        out += f'    if (!CheckArgCount(L, {num_attrs + 1})) {{ return luaL_error(L, "Bad number of args"); }}\n\n'
+        out += f'    Entity e = *static_cast<Entity*>(lua_touserdata(L, 1));\n'
+        out += f'    assert(!e.Has<{name}>());\n\n'
+        out += f'    {name} c;\n'
+        count = 2
+        for attr in attrs:
+            if not attr.get("Scriptable", True):
+                continue
+
+            if attr["Type"] == "Maths::vec3":
+                out += f'    c.{attr["Name"]}.x = (float)lua_tonumber(L, {count});\n'
+                count += 1
+                out += f'    c.{attr["Name"]}.y = (float)lua_tonumber(L, {count});\n'
+                count += 1
+                out += f'    c.{attr["Name"]}.z = (float)lua_tonumber(L, {count});\n'
+                count += 1
+            elif attr["Type"] == "std::string":
+                out += f'    c.{attr["Name"]} = std::string({get_lua_tofunc(attr)}(L, {count}));\n'
+                count += 1
+            else:
+                out += f'    c.{attr["Name"]} = ({attr["Type"]}){get_lua_tofunc(attr)}(L, {count});\n'
+                count += 1
+        out += "    e.Add(c);\n"
         out += "    return 0;\n"
         out += "}\n\n"
     out += footer
