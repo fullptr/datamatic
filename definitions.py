@@ -1,7 +1,5 @@
 from datetime import datetime
 
-ENUMS = {}
-
 def cpp_float(value):
     assert type(value) in {int, float}
     if "." not in str(value):
@@ -9,10 +7,6 @@ def cpp_float(value):
     return f"{value}f"
 
 def default_cpp_repr(cpp_type, value):
-    if cpp_type in ENUMS:
-        assert value in ENUMS[cpp_type]
-        return f"{cpp_type}::{value}"
-
     if cpp_type == "Maths::vec2":
         x, y = value
         return f'Maths::vec2{{{cpp_float(x)}, {cpp_float(y)}}}'
@@ -37,6 +31,9 @@ def default_cpp_repr(cpp_type, value):
     if cpp_type == "std::string":
         return f'"{value}"'
 
+    if cpp_type == "std::queue<Maths::vec3>":  # TODO: Generalise this
+        return "{}"
+
     return str(value)
 
 def print_attr(attr):
@@ -51,8 +48,6 @@ def print_attr(attr):
     return line + "\n"
 
 def generate(spec, output):
-    global ENUMS
-    ENUMS = spec["Enums"]
 
     out = f"// GENERATED FILE @ {datetime.now()}\n"
     out += "#pragma once\n"
@@ -60,13 +55,6 @@ def generate(spec, output):
     out += "#include <queue>\n"
     out += "#include <string>\n\n"
     out += "namespace Sprocket{\n\n"
-
-    out += "// Enums\n"
-    for enum_name, enum_values in spec["Enums"].items():
-        out += f"enum class {enum_name}\n{{\n"
-        for value in enum_values:
-            out += f"    {value},\n"
-        out += "};\n\n"
 
     out += "// Components\n"
     for component in spec["Components"]:
