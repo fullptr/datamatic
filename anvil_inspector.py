@@ -25,7 +25,7 @@ void ShowInspector(EditorLayer& editor)
     }
 
     static DevUI::GizmoCoords coords = DevUI::GizmoCoords::WORLD;
-    static DevUI::GizmoMode mode = DevUI::GizmoMode::ROTATION;
+    static DevUI::GizmoMode mode = DevUI::GizmoMode::TRANSLATION;
 """
 transform = """
     if (entity.Has<TransformComponent>()) {
