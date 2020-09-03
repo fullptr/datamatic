@@ -3,6 +3,11 @@ import os.path as op
 
 from . import definitions
 
+def savable(attrs):
+    for attr in attrs:
+        if attr.get("Savable", True):
+            yield attr
+
 def get_save_impl(spec):
     enums = spec["Enums"]
     out = ""
@@ -12,13 +17,13 @@ def get_save_impl(spec):
         out += f"        if(entity.Has<{name}>()) {{\n"
         out += f"            const auto& c = entity.Get<{name}>();\n"
         out += f'            out << YAML::Key << "{name}" << YAML::BeginMap;\n'
-        for attr in attrs:
+        for attr in savable(attrs):
             attr_name = attr["Name"]
-            if attr.get("Savable", True):
-                if attr["Type"] in enums:
-                    out += f'            out << YAML::Key << "{attr_name}" << YAML::Value << static_cast<int>(c.{attr_name});\n'
-                else:
-                    out += f'            out << YAML::Key << "{attr_name}" << YAML::Value << c.{attr_name};\n'
+            out += f'            out << YAML::Key << "{attr_name}" << YAML::Value << '
+            if attr["Type"] in enums:
+                out += f'static_cast<int>(c.{attr_name});\n'
+            else:
+                out += f'c.{attr_name};\n'
         out += "            out << YAML::EndMap;\n"
         out += "        }\n"
     return out
