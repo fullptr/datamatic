@@ -34,7 +34,7 @@ def default_cpp_repr(cpp_type, value):
     if cpp_type == "std::queue<Maths::vec3>":  # TODO: Generalise this
         return "{}"
 
-    return str(value)
+    return "{}"
 
 def print_attr(attr):
     cpp_name = attr["Name"]
