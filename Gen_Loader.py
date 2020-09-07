@@ -1,5 +1,6 @@
 from datetime import datetime
 import os.path as op
+import re
 
 from . import definitions
 
@@ -7,6 +8,8 @@ def get_attrs(comp, flags):
     attrs = comp["Attributes"] 
     if "SAVABLE" in flags:
         return (attr for attr in attrs if attr.get("Savable", True))
+    if "SCRIPTABLE" in flags:
+        return (attr for attr in attrs if attr.get("Scriptable", True))
     else:
         return attrs
 
