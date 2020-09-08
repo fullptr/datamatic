@@ -3,8 +3,8 @@ from functools import partial
 import os.path as op
 import re
 
-from . import definitions
 from Datamatic.Plugin import Plugin
+from Datamatic import Types
 
 COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
 ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
@@ -45,7 +45,8 @@ def attr_repl(matchobj, attr, flags):
         assert namespace == "Attr" 
 
         if trait == "Default":
-            return definitions.default_cpp_repr(attr["Type"], attr[trait])
+            cls = Types.get(attr["Type"])
+            return repr(cls(attr[trait]))
         
         if value := attr.get(trait):
             if isinstance(value, bool):
@@ -104,7 +105,7 @@ def get_header(dst):
         return "-- GENERATED FILE\n"
     return "// GENERATED FILE\n"
 
-def generate(spec, src):
+def run(spec, src):
     dst = src.replace(".dm.", ".")
     print(f"Generating file {dst}")
     

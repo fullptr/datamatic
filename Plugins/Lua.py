@@ -1,12 +1,12 @@
-from Datamatic import Plugin
+from Datamatic.Plugin import Plugin, compmethod
 
-class Lua(Plugin.Plugin):
+class Lua(Plugin):
     
-    @Plugin.compmethod
+    @compmethod
     def Sig(comp, flags):
         return ", ".join(attr['Name'] for attr in comp['Attributes'] if attr.get('Scriptable', True))
 
-    @Plugin.compmethod
+    @compmethod
     def Impl(comp, flags):
         out = ""
         num_attrs = 0

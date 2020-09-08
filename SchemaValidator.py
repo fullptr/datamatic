@@ -142,4 +142,4 @@ def validate(spec):
     for comp in spec["Components"]:
         validate_component(comp)
 
-    print("Valid!")
+    print("Schema Valid!")

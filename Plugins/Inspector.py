@@ -1,21 +1,21 @@
-from Datamatic import Plugin
-from Datamatic.definitions import cpp_float
+from Datamatic.Plugin import Plugin, compmethod, attrmethod
+from Datamatic import Types
 
-class Inspector(Plugin.Plugin):
+class Inspector(Plugin):
 
-    @Plugin.compmethod
+    @compmethod
     def GuizmoSettings(comp, flags):
         if comp["Name"] == "TransformComponent":
             return "ImGuiXtra::GuizmoSettings(mode, coords);"
         return ""
     
-    @Plugin.compmethod
+    @compmethod
     def Guizmo(comp, flags):
         if comp["Name"] == "TransformComponent":
             return "ShowGuizmo(editor, c, mode, coords);"
         return ""
 
-    @Plugin.attrmethod
+    @attrmethod
     def Display(attr, flags):
         name = attr["Name"]
         display = attr["DisplayName"]
@@ -30,8 +30,8 @@ class Inspector(Plugin.Plugin):
             return f'ImGuiXtra::TextModifiable(c.{name})'
         if cpp_type == "float":
             if limits is not None:
-                a, b = limits
-                return f'ImGui::SliderFloat("{display}", &c.{name}, {cpp_float(a)}, {cpp_float(b)})'
+                a, b = [Types.Float(x) for x in limits]
+                return f'ImGui::SliderFloat("{display}", &c.{name}, {a}, {b})'
             return f'ImGui::DragFloat("{display}", &c.{name}, 0.1f)'
         if cpp_type == "Maths::vec2":
             return f'ImGui::DragFloat2("{display}", &c.{name}.x, 0.1f)'
