@@ -3,11 +3,11 @@ from Datamatic import Plugin
 class Lua(Plugin.Plugin):
     
     @staticmethod
-    def Sig(comp):
+    def Sig(comp, flags):
         return ", ".join(attr['Name'] for attr in comp['Attributes'] if attr.get('Scriptable', True))
 
     @staticmethod
-    def Impl(comp):
+    def Impl(comp, flags):
         out = ""
         num_attrs = 0
         constructor_sig = []

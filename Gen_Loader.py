@@ -9,7 +9,7 @@ from Datamatic.Plugin import Plugin
 COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
 ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
 
-def comp_repl(matchobj, comp):
+def comp_repl(matchobj, comp, flags):
     symbols = matchobj.group(1)[2:-2].split(".")
     assert len(symbols) in {2, 3}
 
@@ -30,7 +30,7 @@ def comp_repl(matchobj, comp):
 
         plugin = Plugin.get(plugin_name)
         func = getattr(plugin, trait)
-        return func(comp)
+        return func(comp, flags)
 
     else:
         raise RuntimeError(f"Invalid line {symbols}")
@@ -70,7 +70,7 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = COMP_MATCH.sub(partial(comp_repl, comp=comp), line)
+                line = COMP_MATCH.sub(partial(comp_repl, comp=comp, flags=flags), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
