@@ -4,71 +4,67 @@ import os.path as op
 import re
 
 from . import definitions
+from Datamatic.Plugin import Plugin
 
 COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
 ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
 
-class CompHandle:
-    def __init__(self, comp):
-        self.comp = comp
-
-    def __getattr__(self, attr):
-        if attr in self.comp:
-            value = self.comp[attr]
-            if isinstance(value, bool):
-                return "true" if value else "false"
-            elif isinstance(value, str):
-                return value
-        raise RuntimeError(f"Accessing invalid attr {attr}")
-
-class Attr:
-    pass
-
 def comp_repl(matchobj, comp):
     symbols = matchobj.group(1)[2:-2].split(".")
-    handle = CompHandle(comp)
+    assert len(symbols) in {2, 3}
+
+    if len(symbols) == 2:
+        namespace, trait = symbols
+        assert namespace == "Comp" 
+
+        if value := comp.get(trait):
+            if isinstance(value, bool):
+                return "true" if value else "false"
+            if isinstance(value, str):
+                return value
+        raise RuntimeError(f"Accessing invalid attr {trait}")
+
+    elif len(symbols) == 3:
+        namespace, plugin_name, trait = symbols
+        assert namespace == "Comp"
+
+        plugin = Plugin.get(plugin_name)
+        func = getattr(plugin, trait)
+        return func(comp)
+
+    else:
+        raise RuntimeError(f"Invalid line {symbols}")
+
+def attr_repl(matchobj, attr):
+    symbols = matchobj.group(1)[2:-2].split(".")
     assert len(symbols) == 2
-    first, second = symbols
-    assert first == "Comp" 
-    return getattr(handle, second)
+    namespace, trait = symbols
+
+    assert namespace == "Attr" 
+    if trait == "Default":
+        return definitions.default_cpp_repr(attr["Type"], attr[trait])
+    
+    if value := attr.get(trait):
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, str):
+            return value
+    raise RuntimeError(f"Accessing invalid attr {trait}")
 
 def get_attrs(comp, flags):
     attrs = comp["Attributes"] 
     if "SAVABLE" in flags:
-        return (attr for attr in attrs if attr.get("Savable", True))
+        attrs = [x for x in attrs if x.get("Savable", True)]
     if "SCRIPTABLE" in flags:
-        return (attr for attr in attrs if attr.get("Scriptable", True))
-    else:
-        return attrs
+        attrs = [x for x in attrs if x.get("Scriptable", True)]
+    return attrs
 
 
 def fill_attribute(attr, line):
-    line = line.replace("{{Attr.Name}}", attr["Name"])
-    line = line.replace("{{Attr.DisplayName}}", attr["DisplayName"])
-    line = line.replace("{{Attr.Type}}", attr["Type"])
-
-    line = line.replace(
-        "{{Attr.Default}}",
-        definitions.default_cpp_repr(attr["Type"], attr["Default"])
-    )
-
-    assert "{{Attr." not in line, line
-    return line
-
-
-def fill_component(comp, line):
-    while "{{Comp." in line:
-        line = COMP_MATCH.sub(partial(comp_repl, comp=comp), line)
-    #line = line.replace("{{Comp.Name}}", comp["Name"])
-    #line = line.replace("{{Comp.DisplayName}}", comp["DisplayName"])
-
-    #line = line.replace(
-    #    "{{Comp.Scriptable}}",
-    #    "true" if comp.get("Scriptable", True) else "false"
-    #)
+    while "{{Attr." in line:
+        line = COMP_MATCH.sub(partial(attr_repl, attr=attr), line)
 
     return line
-
 
 def process_block(spec, block, flags):
     out = ""
@@ -79,11 +75,19 @@ def process_block(spec, block, flags):
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
-                    out += fill_attribute(attr, line) + "\n"
+                    newline = line
+                    while "{{Attr." in newline:
+                        newline = ATTR_MATCH.sub(partial(attr_repl, attr=attr), newline)
+                    out += newline + "\n"
             else:
                 out += line + "\n"
 
     return out
+
+def get_header(dst):
+    if dst.endswith(".lua"):
+        return "-- GENERATED FILE\n"
+    return "// GENERATED FILE\n"
 
 def generate(spec, src, dst):
     
@@ -93,7 +97,7 @@ def generate(spec, src, dst):
     in_block = False
     block = []
     flags = set()
-    out = "// GENERATED FILE\n"
+    out = get_header(dst)
     for line in lines:
         line = line.rstrip()
 
