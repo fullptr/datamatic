@@ -59,16 +59,15 @@ def get_attrs(comp, flags):
         attrs = [x for x in attrs if x.get("Scriptable", True)]
     return attrs
 
-
-def fill_attribute(attr, line):
-    while "{{Attr." in line:
-        line = COMP_MATCH.sub(partial(attr_repl, attr=attr), line)
-
-    return line
+def get_comps(spec, flags):
+    comps = spec["Components"]
+    if "SCRIPTABLE" in flags:
+        comps = [x for x in comps if x.get("Scriptable", True)]
+    return comps
 
 def process_block(spec, block, flags):
     out = ""
-    for comp in spec["Components"]:
+    for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
                 line = COMP_MATCH.sub(partial(comp_repl, comp=comp), line)
