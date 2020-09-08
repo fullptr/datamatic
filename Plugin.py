@@ -1,5 +1,3 @@
-import abc
-
 class Plugin:
     @classmethod
     def get(cls, name):
