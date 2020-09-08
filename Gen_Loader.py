@@ -30,26 +30,42 @@ def comp_repl(matchobj, comp, flags):
 
         plugin = Plugin.get(plugin_name)
         func = getattr(plugin, trait)
+        assert func.__type == "Comp"
         return func(comp, flags)
 
     else:
         raise RuntimeError(f"Invalid line {symbols}")
 
-def attr_repl(matchobj, attr):
+def attr_repl(matchobj, attr, flags):
     symbols = matchobj.group(1)[2:-2].split(".")
-    assert len(symbols) == 2
-    namespace, trait = symbols
+    assert len(symbols) in {2, 3}
 
-    assert namespace == "Attr" 
-    if trait == "Default":
-        return definitions.default_cpp_repr(attr["Type"], attr[trait])
+    if len(symbols) == 2:
+        namespace, trait = symbols
+        assert namespace == "Attr" 
+
+        if trait == "Default":
+            return definitions.default_cpp_repr(attr["Type"], attr[trait])
+        
+        if value := attr.get(trait):
+            if isinstance(value, bool):
+                return "true" if value else "false"
+            if isinstance(value, str):
+                return value
+        raise RuntimeError(f"Accessing invalid attr {trait}")
+
+    elif len(symbols) == 3:
+        namespace, plugin_name, trait = symbols
+        assert namespace == "Attr"
+
+        plugin = Plugin.get(plugin_name)
+        func = getattr(plugin, trait)
+        assert func.__type == "Attr"
+        return func(attr, flags)
     
-    if value := attr.get(trait):
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        if isinstance(value, str):
-            return value
-    raise RuntimeError(f"Accessing invalid attr {trait}")
+    else:
+        raise RuntimeError(f"Invalid line {symbols}")
+
 
 def get_attrs(comp, flags):
     attrs = comp["Attributes"] 
@@ -76,7 +92,7 @@ def process_block(spec, block, flags):
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = ATTR_MATCH.sub(partial(attr_repl, attr=attr), newline)
+                        newline = ATTR_MATCH.sub(partial(attr_repl, attr=attr, flags=flags), newline)
                     out += newline + "\n"
             else:
                 out += line + "\n"
