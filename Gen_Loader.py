@@ -1,8 +1,36 @@
 from datetime import datetime
+from functools import partial
 import os.path as op
 import re
 
 from . import definitions
+
+COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
+ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
+
+class CompHandle:
+    def __init__(self, comp):
+        self.comp = comp
+
+    def __getattr__(self, attr):
+        if attr in self.comp:
+            value = self.comp[attr]
+            if isinstance(value, bool):
+                return "true" if value else "false"
+            elif isinstance(value, str):
+                return value
+        raise RuntimeError(f"Accessing invalid attr {attr}")
+
+class Attr:
+    pass
+
+def comp_repl(matchobj, comp):
+    symbols = matchobj.group(1)[2:-2].split(".")
+    handle = CompHandle(comp)
+    assert len(symbols) == 2
+    first, second = symbols
+    assert first == "Comp" 
+    return getattr(handle, second)
 
 def get_attrs(comp, flags):
     attrs = comp["Attributes"] 
@@ -29,15 +57,16 @@ def fill_attribute(attr, line):
 
 
 def fill_component(comp, line):
-    line = line.replace("{{Comp.Name}}", comp["Name"])
-    line = line.replace("{{Comp.DisplayName}}", comp["DisplayName"])
+    while "{{Comp." in line:
+        line = COMP_MATCH.sub(partial(comp_repl, comp=comp), line)
+    #line = line.replace("{{Comp.Name}}", comp["Name"])
+    #line = line.replace("{{Comp.DisplayName}}", comp["DisplayName"])
 
-    line = line.replace(
-        "{{Comp.Scriptable}}",
-        "true" if comp.get("Scriptable", True) else "false"
-    )
+    #line = line.replace(
+    #    "{{Comp.Scriptable}}",
+    #    "true" if comp.get("Scriptable", True) else "false"
+    #)
 
-    assert "{{Comp." not in line, line
     return line
 
 
@@ -45,7 +74,8 @@ def process_block(spec, block, flags):
     out = ""
     for comp in spec["Components"]:
         for line in block:
-            line = fill_component(comp, line)
+            while "{{Comp." in line:
+                line = COMP_MATCH.sub(partial(comp_repl, comp=comp), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):

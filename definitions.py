@@ -35,35 +35,3 @@ def default_cpp_repr(cpp_type, value):
         return "{}"
 
     return "{}"
-
-def print_attr(attr):
-    cpp_name = attr["Name"]
-    cpp_type = attr["Type"]
-    default = attr.get("Default")
-    
-    line = f"    {cpp_type} {cpp_name}"
-    if default is not None:
-        line += " = " + default_cpp_repr(cpp_type, default)
-    line += ";"
-    return line + "\n"
-
-def generate(spec, output):
-
-    out = f"// GENERATED FILE @ {datetime.now()}\n"
-    out += "#pragma once\n"
-    out += '#include "Maths.h"\n'
-    out += "#include <queue>\n"
-    out += "#include <string>\n\n"
-    out += "namespace Sprocket{\n\n"
-
-    out += "// Components\n"
-    for component in spec["Components"]:
-        out += f"struct {component['Name']}\n{{\n"
-        for attr in component["Attributes"]:
-            out += print_attr(attr)
-        out += "};\n\n"
-
-    out += "}\n"
-
-    with open(output, "w") as outfile:
-        outfile.write(out)
