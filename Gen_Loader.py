@@ -104,7 +104,9 @@ def get_header(dst):
         return "-- GENERATED FILE\n"
     return "// GENERATED FILE\n"
 
-def generate(spec, src, dst):
+def generate(spec, src):
+    dst = src.replace(".dm.", ".")
+    print(f"Generating file {dst}")
     
     with open(src) as srcfile:
         lines = srcfile.readlines()
