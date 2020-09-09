@@ -69,18 +69,16 @@ def attr_repl(matchobj, attr, flags):
 
 
 def get_attrs(comp, flags):
-    attrs = comp["Attributes"] 
-    if "SAVABLE" in flags:
-        attrs = [x for x in attrs if x.get("Savable", True)]
-    if "SCRIPTABLE" in flags:
-        attrs = [x for x in attrs if x.get("Scriptable", True)]
+    attrs = comp["Attributes"]
+    for key, value in flags.items():
+        attrs = [x for x in attrs if x[key] == value]
     return attrs
 
 
 def get_comps(spec, flags):
     comps = spec["Components"]
-    if "SCRIPTABLE" in flags:
-        comps = [x for x in comps if x.get("Scriptable", True)]
+    for key, value in flags.items():
+        attrs = [x for x in comps if x[key] == value]
     return comps
 
 
@@ -109,6 +107,22 @@ def get_header(dst):
     return "// GENERATED FILE\n"
 
 
+def parse_flag_val(val):
+    assert val in {"true", "false"}
+    return True if val == "true" else False
+
+
+def parse_flags(flags):
+    parsed_flags = {}
+    for flag in flags:
+        flag = flag.split("=")
+        assert len(flag) == 2
+        name = flag[0]
+        val = parse_flag_val(flag[1])
+        parsed_flags[name] = val
+    return parsed_flags
+
+
 def run(spec, src):
     dst = src.parent / src.name.replace(".dm.", ".")
 
@@ -133,7 +147,7 @@ def run(spec, src):
         elif line.startswith("#ifdef DATAMATIC_BLOCK"):
             assert not in_block
             in_block = True
-            flags = set(line.split()[2:])
+            flags = parse_flags(set(line.split()[2:]))
         else:
             out += line + "\n"
 
