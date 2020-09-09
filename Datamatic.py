@@ -1,11 +1,17 @@
+"""
+A tool for generating code based on a schema of Components.
+"""
 import json
 import argparse
 import pathlib
 
-from Datamatic import Plugins, Validator, Generator
+from Datamatic import Plugins, Types, Validator, Generator
 
 
 def parse_args():
+    """
+    Read the command line.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--spec", required=True)
     parser.add_argument("-d", "--dir", required=True)
@@ -13,7 +19,11 @@ def parse_args():
 
 
 def main(args):
+    """
+    Entry point.
+    """
     Plugins.load_all(args.dir)
+    Types.load_all(args.dir)
 
     with open(args.spec) as specfile:
         spec = json.loads(specfile.read())
