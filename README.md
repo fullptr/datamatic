@@ -49,8 +49,5 @@ This is going to be generalised. Currently, extra flags can be defined by users 
 
 ## Future
 - Generalise the flags concept and remove hardcoded flags from the core library.
-- Remove the hardcoded `Maths::*` types. These are artifacts from my game engine project. It should be possible for users to define custom types. `int`, `float`, `bool`
-  and `std::string` will be considered as "built in" types. These will either be specified within the spec file or be done in a similar way to Plugins as python files
-  that get automatically discovered.
 - Look into other language support. Currently only C++ is properly supported. I have used this to generate Lua code as well, but most of that is done with a Plugin,
   whereas I'd like Datamatic to be more language agnostic, considering the bulk of the language specific stuff lives in the template files themselves.
