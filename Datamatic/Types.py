@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class CppType(ABC):
     @abstractmethod
     def __repr__(self): ...
@@ -7,6 +8,7 @@ class CppType(ABC):
     @staticmethod
     @abstractmethod
     def typename(self): ...
+
 
 class Integer(CppType):
     def __init__(self, val):
@@ -19,6 +21,7 @@ class Integer(CppType):
     @staticmethod
     def typename():
         return "int"
+
 
 class Float(CppType):
     def __init__(self, val):
@@ -34,6 +37,7 @@ class Float(CppType):
     def typename():
         return "float"
 
+
 class Boolean(CppType):
     def __init__(self, val):
         assert isinstance(val, bool)
@@ -46,6 +50,7 @@ class Boolean(CppType):
     def typename():
         return "bool"
 
+
 class String(CppType):
     def __init__(self, val):
         assert isinstance(val, str)
@@ -57,6 +62,7 @@ class String(CppType):
     @staticmethod
     def typename():
         return "std::string"
+
 
 class Vec2(CppType):
     def __init__(self, val):
@@ -71,6 +77,7 @@ class Vec2(CppType):
     def typename():
         return "Maths::vec2"
 
+
 class Vec3(CppType):
     def __init__(self, val):
         assert isinstance(val, list)
@@ -83,6 +90,7 @@ class Vec3(CppType):
     @staticmethod
     def typename():
         return "Maths::vec3"
+
 
 class Vec4(CppType):
     def __init__(self, val):
@@ -97,6 +105,7 @@ class Vec4(CppType):
     def typename():
         return "Maths::vec4"
 
+
 class Quat(CppType):
     def __init__(self, val):
         assert isinstance(val, list)
@@ -110,6 +119,7 @@ class Quat(CppType):
     def typename():
         return "Maths::quat"
 
+
 class Mat4(CppType): # TODO: Implement
     def __init__(self, val):
         pass
@@ -121,6 +131,7 @@ class Mat4(CppType): # TODO: Implement
     def typename():
         return "Maths::mat4"
 
+
 class QueueVec3(CppType): # TODO: Implement
     def __init__(self, val):
         pass
@@ -131,6 +142,7 @@ class QueueVec3(CppType): # TODO: Implement
     @staticmethod
     def typename():
         return "std::queue<Maths::vec3>"
+
 
 def get(typename):
     for cls in CppType.__subclasses__():
