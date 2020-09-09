@@ -18,30 +18,9 @@ ATTR_KEYS_REQ = {
 }
 
 ATTR_KEYS_OPT = {
-    "Subtype",
     "Scriptable",
     "Savable",
     "Data",
-    "Limits"
-}
-
-# Types -> Subtypes
-ATTR_TYPES = {
-    "bool",
-    "int",
-    "float",
-    "std::string",
-    "Maths::vec2",
-    "Maths::vec3",
-    "Maths::vec4",
-    "Maths::quat",
-    "Maths::mat4",
-    "std::queue<Maths::vec3>" # TODO: Generalise this
-}
-
-ATTR_SUBTYPES = {
-    "std::string": ["File"],
-    "Maths::vec3": ["Colour"]
 }
 
 def validate_attribute(attr):
@@ -58,23 +37,10 @@ def validate_attribute(attr):
     if attr["Type"] == "Maths::mat4": # TODO: Remove this
         assert attr["Scriptable"] is False, "Maths::mat4 is currently not scriptable"
 
-    if "Subtype" in attr:
-        assert attr["Subtype"] in ATTR_SUBTYPES[attr["Type"]], attr
     if "Scriptable" in attr:
         assert isinstance(attr["Scriptable"], bool), attr
     if "Savable" in attr:
         assert isinstance(attr["Savable"], bool), attr
-    if "Data" in attr:
-        assert isinstance(attr["Data"], str), attr
-    if "Limits" in attr:
-        limits = attr["Limits"]
-        assert type(attr["Type"] in ["int", "float"]), attr
-        assert isinstance(limits, list), attr
-        assert len(limits) == 2, attr
-        if attr["Type"] == "int":
-            assert all([isinstance(x, int) for x in limits])
-        else:
-            assert all([isinstance(x, float) for x in limits])
 
 
 def validate_component(comp):
@@ -93,9 +59,6 @@ def validate_component(comp):
 
 
 def validate(spec):
-    # First, check that the validator is in a correct state
-    assert set(ATTR_SUBTYPES.keys()) <= ATTR_TYPES
-
     # Now, validate the schema
     assert set(spec.keys()) == {"Version", "Components"}
 

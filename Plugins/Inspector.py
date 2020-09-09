@@ -20,8 +20,8 @@ class Inspector(Plugin):
         name = attr["Name"]
         display = attr["DisplayName"]
         cpp_type = attr["Type"]
-        cpp_subtype = attr.get("Subtype")
-        limits = attr.get("Limits")
+        cpp_subtype = attr.get("Data", {}).get("Subtype")
+        limits = attr.get("Data", {}).get("Limits")
 
         if cpp_type == "std::string":
             if cpp_subtype == "File":
