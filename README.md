@@ -28,6 +28,6 @@ will place alongside the template files with the `.dm` removed. So far, it has b
 ### Plugins
 
 The syntax for Datamatic is very simple, and as such it may not be capable of generating the desired code. To this end, it is possible to create Plugins to allow
-users to define text replacement functions using the full power of Python:
+users to define text replacement functions using the full power of Python. These can be placed anywhere inside the target repo and Datamatic will discover them.
 
 ![Plugins](res/Plugin.png)
