@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import partial
 import os.path as op
 import re
@@ -107,7 +106,6 @@ def get_header(dst):
 
 def run(spec, src):
     dst = src.replace(".dm.", ".")
-    print(f"Generating file {dst}")
     
     with open(src) as srcfile:
         lines = srcfile.readlines()
@@ -134,5 +132,13 @@ def run(spec, src):
         else:
             out += line + "\n"
 
+    if op.exists(dst):
+        with open(dst) as dstfile:
+            if dstfile.read() == out:
+                print(f"No change to {dst}")
+                return
+
     with open(dst, "w") as dstfile:
         dstfile.write(out)
+
+    print(f"Generated file {dst}")
