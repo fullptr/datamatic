@@ -2,7 +2,7 @@ from functools import partial
 import os.path as op
 import re
 
-from Datamatic.Plugin import Plugin
+from Datamatic.Plugins import Plugin
 from Datamatic import Types
 
 COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
