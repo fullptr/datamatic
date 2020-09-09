@@ -4,6 +4,7 @@ A tool for generating code based on a schema of Components.
 import json
 import argparse
 import pathlib
+import sys
 import importlib
 
 from Datamatic import Plugins, Validator, Generator
