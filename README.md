@@ -22,7 +22,7 @@ python3.8 Datamatic.py --spec <path/to/json/spec> --dir <path/to/project>
 Datamatic will then recurse through the entire directory looking for files with extensions `*.dm.*`, and use those as templates for generating source code, which it 
 will place alongside the template files with the `.dm` removed. So far, it has been tested with `.dm.h`, `.dm.cpp` and `.dm.lua` files.
 
-![Overview](res/Overview.png)
+![Overview](Datamatic/res/Overview.png)
 
 
 ### Plugins
@@ -30,4 +30,4 @@ will place alongside the template files with the `.dm` removed. So far, it has b
 The syntax for Datamatic is very simple, and as such it may not be capable of generating the desired code. To this end, it is possible to create Plugins to allow
 users to define text replacement functions using the full power of Python:
 
-![Plugins](res/Plugin.png)
+![Plugins](Datamatic/res/Plugin.png)
