@@ -2,9 +2,7 @@ import json
 import argparse
 import pathlib
 
-from Datamatic import Validator
-from Datamatic import Generator
-from Plugins import Lua, Inspector
+from Datamatic import Plugin, Validator, Generator
 
 
 def parse_args():
@@ -15,6 +13,9 @@ def parse_args():
 
 
 def main(args):
+
+    Plugin.load_all(args.dir)
+
     with open(args.spec) as specfile:
         spec = json.loads(specfile.read())
 
