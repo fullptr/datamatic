@@ -1,3 +1,7 @@
+"""
+Validates a given schema to make sure it is well-formed. This should
+also serve as documentation for what makes a valid schema.
+"""
 from Datamatic import Types
 
 COMP_KEYS_REQ = {
@@ -24,6 +28,9 @@ ATTR_KEYS_OPT = {
 }
 
 def validate_attribute(attr):
+    """
+    Asserts that the given attribute is well-formed.
+    """
     assert ATTR_KEYS_REQ <= set(attr.keys()), attr
     assert set(attr.keys()) <= ATTR_KEYS_REQ | ATTR_KEYS_OPT, attr
 
@@ -32,10 +39,7 @@ def validate_attribute(attr):
 
     cls = Types.get(attr["Type"])
     assert cls is not None
-    obj = cls(attr["Default"]) # Will assert if invalid
-
-    if attr["Type"] == "Maths::mat4": # TODO: Remove this
-        assert attr["Scriptable"] is False, "Maths::mat4 is currently not scriptable"
+    cls(attr["Default"]) # Will assert if invalid
 
     if "Scriptable" in attr:
         assert isinstance(attr["Scriptable"], bool), attr
@@ -44,6 +48,9 @@ def validate_attribute(attr):
 
 
 def validate_component(comp):
+    """
+    Asserts that the given component is well-formed.
+    """
     assert COMP_KEYS_REQ <= set(comp.keys()), comp
     assert set(comp.keys()) <= COMP_KEYS_REQ | COMP_KEYS_OPT, comp
 
@@ -59,6 +66,10 @@ def validate_component(comp):
 
 
 def run(spec):
+    """
+    Runs the validator against the given spec, raising an exception if there
+    is an error in the schema.
+    """
     assert set(spec.keys()) == {"Version", "Components"}
 
     assert isinstance(spec["Version"], int)

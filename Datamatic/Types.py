@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-
+import pathlib
+import sys
+import importlib.util as iu
 
 class CppType(ABC):
     @abstractmethod
@@ -62,86 +64,6 @@ class String(CppType):
     @staticmethod
     def typename():
         return "std::string"
-
-
-class Vec2(CppType):
-    def __init__(self, val):
-        assert isinstance(val, list)
-        assert all([isinstance(x, float) for x in val])
-        self.x, self.y = [Float(t) for t in val]
-
-    def __repr__(self):
-        return f'{self.typename()}{{{self.x}, {self.y}}}'
-
-    @staticmethod
-    def typename():
-        return "Maths::vec2"
-
-
-class Vec3(CppType):
-    def __init__(self, val):
-        assert isinstance(val, list)
-        assert all([isinstance(x, float) for x in val])
-        self.x, self.y, self.z = [Float(t) for t in val]
-
-    def __repr__(self):
-        return f'{self.typename()}{{{self.x}, {self.y}, {self.z}}}'
-
-    @staticmethod
-    def typename():
-        return "Maths::vec3"
-
-
-class Vec4(CppType):
-    def __init__(self, val):
-        assert isinstance(val, list)
-        assert all([isinstance(x, float) for x in val])
-        self.x, self.y, self.z, self.w = [Float(t) for t in val]
-
-    def __repr__(self):
-        return f'{self.typename()}{{{self.x}, {self.y}, {self.z}, {self.w}}}'
-
-    @staticmethod
-    def typename():
-        return "Maths::vec4"
-
-
-class Quat(CppType):
-    def __init__(self, val):
-        assert isinstance(val, list)
-        assert all([isinstance(x, float) for x in val])
-        self.x, self.y, self.z, self.w = [Float(t) for t in val]
-
-    def __repr__(self):
-        return f'{self.typename()}{{{self.x}, {self.y}, {self.z}, {self.w}}}'
-
-    @staticmethod
-    def typename():
-        return "Maths::quat"
-
-
-class Mat4(CppType): # TODO: Implement
-    def __init__(self, val):
-        pass
-
-    def __repr__(self):
-        return f"{self.typename()}{{1.0}}"
-
-    @staticmethod
-    def typename():
-        return "Maths::mat4"
-
-
-class QueueVec3(CppType): # TODO: Implement
-    def __init__(self, val):
-        pass
-
-    def __repr__(self):
-        return f"{self.typename()}{{}}"
-
-    @staticmethod
-    def typename():
-        return "std::queue<Maths::vec3>"
 
 
 def get(typename):
