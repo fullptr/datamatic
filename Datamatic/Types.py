@@ -1,18 +1,42 @@
+"""
+A module that holds CppType, a base class for classes that represent
+C++ types. Users can subclass this to add their own types to
+Datamatic.
+"""
 from abc import ABC, abstractmethod
-import pathlib
-import sys
-import importlib.util as iu
 
-class CppType(ABC):
+
+class Type(ABC):
+    """
+    Base type for all types used in Datamatic. Subclass this to add
+    extra types.
+    """
+
     @abstractmethod
-    def __repr__(self): ...
+    def __init__(self):
+        """
+        This should contain asserts to verify that the construction of
+        this object was successful. This will be used in the validator
+        to make sure the schema provided to Datamatic is valid.
+        """
+
+    @abstractmethod
+    def __repr__(self):
+        """
+        This should return a string representation of how this object
+        will look in C++.
+        """
 
     @staticmethod
     @abstractmethod
-    def typename(self): ...
+    def typename():
+        """
+        This should return a string representation of how this type
+        will look in C++.
+        """
 
 
-class Integer(CppType):
+class Integer(Type):
     def __init__(self, val):
         assert isinstance(val, int)
         self.val = val
@@ -25,7 +49,7 @@ class Integer(CppType):
         return "int"
 
 
-class Float(CppType):
+class Float(Type):
     def __init__(self, val):
         assert isinstance(val, (int, float))
         self.val = val
@@ -40,7 +64,7 @@ class Float(CppType):
         return "float"
 
 
-class Boolean(CppType):
+class Boolean(Type):
     def __init__(self, val):
         assert isinstance(val, bool)
         self.val = val
@@ -53,7 +77,7 @@ class Boolean(CppType):
         return "bool"
 
 
-class String(CppType):
+class String(Type):
     def __init__(self, val):
         assert isinstance(val, str)
         self.val = val
@@ -67,7 +91,7 @@ class String(CppType):
 
 
 def get(typename):
-    for cls in CppType.__subclasses__():
+    for cls in Type.__subclasses__():
         if cls.typename() == typename:
             return cls
     print(f"Could not find {typename}")

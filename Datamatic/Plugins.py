@@ -1,6 +1,8 @@
-import pathlib
-import sys
-import importlib.util as iu
+"""
+A module that holds Plugin, a base class for plugins to Datamatic.
+Users can implement plugins that hook up to tokens in dm files for
+custom behaviour.
+"""
 
 
 class Plugin:

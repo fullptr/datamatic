@@ -1,12 +1,12 @@
-from functools import partial
-import os.path as op
 import re
-
+from functools import partial
 from Datamatic.Plugins import Plugin
 from Datamatic import Types
 
+
 COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
 ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
+
 
 def comp_repl(matchobj, comp, flags):
     symbols = matchobj.group(1)[2:-2].split(".")
@@ -34,6 +34,7 @@ def comp_repl(matchobj, comp, flags):
 
     else:
         raise RuntimeError(f"Invalid line {symbols}")
+
 
 def attr_repl(matchobj, attr, flags):
     symbols = matchobj.group(1)[2:-2].split(".")
@@ -75,11 +76,13 @@ def get_attrs(comp, flags):
         attrs = [x for x in attrs if x.get("Scriptable", True)]
     return attrs
 
+
 def get_comps(spec, flags):
     comps = spec["Components"]
     if "SCRIPTABLE" in flags:
         comps = [x for x in comps if x.get("Scriptable", True)]
     return comps
+
 
 def process_block(spec, block, flags):
     out = ""
@@ -99,15 +102,17 @@ def process_block(spec, block, flags):
 
     return out
 
+
 def get_header(dst):
-    if dst.endswith(".lua"):
+    if dst.suffix == ".lua":
         return "-- GENERATED FILE\n"
     return "// GENERATED FILE\n"
 
+
 def run(spec, src):
-    dst = src.replace(".dm.", ".")
-    
-    with open(src) as srcfile:
+    dst = src.parent / src.name.replace(".dm.", ".")
+
+    with src.open() as srcfile:
         lines = srcfile.readlines()
 
     in_block = False
@@ -132,13 +137,13 @@ def run(spec, src):
         else:
             out += line + "\n"
 
-    if op.exists(dst):
-        with open(dst) as dstfile:
+    if dst.exists():
+        with dst.open() as dstfile:
             if dstfile.read() == out:
                 print(f"No change to {dst}")
                 return
 
-    with open(dst, "w") as dstfile:
+    with dst.open("w") as dstfile:
         dstfile.write(out)
 
     print(f"Generated file {dst}")

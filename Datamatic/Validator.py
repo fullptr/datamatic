@@ -4,15 +4,18 @@ also serve as documentation for what makes a valid schema.
 """
 from Datamatic import Types
 
+
 COMP_KEYS_REQ = {
     "Name",
     "DisplayName",
     "Attributes"
 }
 
+
 COMP_KEYS_OPT = {
     "Scriptable"
 }
+
 
 ATTR_KEYS_REQ = {
     "Name",
@@ -21,11 +24,13 @@ ATTR_KEYS_REQ = {
     "Default"
 }
 
+
 ATTR_KEYS_OPT = {
     "Scriptable",
     "Savable",
     "Data",
 }
+
 
 def validate_attribute(attr):
     """

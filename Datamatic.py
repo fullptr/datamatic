@@ -5,15 +5,13 @@ import json
 import argparse
 import pathlib
 import sys
-import importlib
-
+import importlib.util
 from Datamatic import Plugins, Validator, Generator
 
 
 def discover(directory):
-    for file in pathlib.Path(directory).glob("**/*.dmx.py"):
-        name = file.parts[-1].split(".")[0]
-        spec = importlib.util.spec_from_file_location(name, str(file))
+    for file in directory.glob("**/*.dmx.py"):
+        spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
@@ -23,9 +21,26 @@ def parse_args():
     """
     Read the command line.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--spec", required=True)
-    parser.add_argument("-d", "--dir", required=True)
+    parser = argparse.ArgumentParser(
+        description="Given a component spec and a directory, scan the "
+                    "directory for dm and dmx files and generate the "
+                    "appropriate files"
+    )
+
+    parser.add_argument(
+        "-s", "--spec",
+        required=True,
+        type=pathlib.Path,
+        help="A path to the component spec JSON file"
+    )
+
+    parser.add_argument(
+        "-d", "--dir",
+        required=True,
+        type=pathlib.Path,
+        help="A path to the directory to scan for dm and dmx files"
+    )
+
     return parser.parse_args()
 
 
@@ -35,13 +50,13 @@ def main(args):
     """
     discover(args.dir)
 
-    with open(args.spec) as specfile:
+    with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
 
     Validator.run(spec)
 
-    for file in pathlib.Path(args.dir).glob("**/*.dm.*"):
-        Generator.run(spec, str(file))
+    for file in args.dir.glob("**/*.dm.*"):
+        Generator.run(spec, file)
 
     print("Done!")
 
