@@ -71,14 +71,14 @@ def attr_repl(matchobj, attr, flags):
 def get_attrs(comp, flags):
     attrs = comp["Attributes"]
     for key, value in flags.items():
-        attrs = [x for x in attrs if x[key] == value]
+        attrs = [x for x in attrs if x["Flags"][key] == value]
     return attrs
 
 
 def get_comps(spec, flags):
     comps = spec["Components"]
     for key, value in flags.items():
-        attrs = [x for x in comps if x[key] == value]
+        comps = [x for x in comps if x["Flags"][key] == value]
     return comps
 
 
