@@ -58,8 +58,7 @@ def validate_component(comp):
         validate_attribute(attr)
 
 
-def validate(spec):
-    # Now, validate the schema
+def run(spec):
     assert set(spec.keys()) == {"Version", "Components"}
 
     assert isinstance(spec["Version"], int)
