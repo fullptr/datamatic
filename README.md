@@ -24,6 +24,9 @@ will place alongside the template files with the `.dm` removed. So far, it has b
 
 ![Overview](res/Overview.png)
 
+### Spec
+
+This is currently changing a lot as Datamatic evolves, see [here](Datamatic/Validator.py) to see the current schema validator.
 
 ### Plugins
 
@@ -31,3 +34,9 @@ The syntax for Datamatic is very simple, and as such it may not be capable of ge
 users to define text replacement functions using the full power of Python. These can be placed anywhere inside the target repo and Datamatic will discover them.
 
 ![Plugins](res/Plugin.png)
+
+### Flags
+
+This is currently heavily WIP, currently there are some hardcoded flags that can be specified when defining a block in a template: `SCRIPTABLE` and `SAVABLE`. These
+are flags that may be set on components and/or attributes, and when these flags are set, only components/attributes with those flags will get code generated for them.
+This is going to be generalised. Currently, extra flags can be defined by users but they can only be used within Plugins currently.
