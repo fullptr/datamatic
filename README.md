@@ -28,10 +28,16 @@ will place alongside the template files with the `.dm` removed. So far, it has b
 
 This is currently changing a lot as Datamatic evolves, see [here](Datamatic/Validator.py) to see the current schema validator.
 
+### Types
+
+The basic types that are supported by default are int, float, bool and std::string. Users can define new types by subclassing CppType. These can be placed anywhere
+inside the target repo within a `*.dmx.py` file and Datamatic will automatically discover it.
+
 ### Plugins
 
 The syntax for Datamatic is very simple, and as such it may not be capable of generating the desired code. To this end, it is possible to create Plugins to allow
-users to define text replacement functions using the full power of Python. These can be placed anywhere inside the target repo and Datamatic will discover them.
+users to define text replacement functions using the full power of Python. These can be placed anywhere inside the target repo within a `*.dmx.py` file and
+Datamatic will discover them.
 
 ![Plugins](res/Plugin.png)
 

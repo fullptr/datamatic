@@ -72,12 +72,3 @@ def get(typename):
             return cls
     print(f"Could not find {typename}")
     return None
-
-
-def load_all(directory):
-    for file in pathlib.Path(directory).glob("**/*.dm_type.py"):
-        name = file.parts[-1].split(".")[0]
-        spec = iu.spec_from_file_location(name, str(file))
-        module = iu.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
