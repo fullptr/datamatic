@@ -37,7 +37,7 @@ FLAG_KEYS = {
 }
 
 
-def validate_attribute(attr):
+def validate_attribute(attr, flags):
     """
     Asserts that the given attribute is well-formed.
     """
@@ -54,20 +54,21 @@ def validate_attribute(attr):
     if "Flags" in attr:
         assert isinstance(attr["Flags"], dict)
         for key, val in attr["Flags"].items():
-            assert isinstance(key, str)
-            assert isinstance(val, bool)
+            assert key in flags, f"{key} is not a valid flag"
+            assert isinstance(key, str), attr
+            assert isinstance(val, bool), attr
 
 
 def validate_flag(flag):
     """
     Asserts that the given flag is well-formed.
     """
-    assert set(flag.keys()) == FLAG_KEYS
-    assert isinstance(flag["Name"], str)
-    assert isinstance(flag["Default"], bool)
+    assert set(flag.keys()) == FLAG_KEYS, flag
+    assert isinstance(flag["Name"], str), flag
+    assert isinstance(flag["Default"], bool), flag
 
 
-def validate_component(comp):
+def validate_component(comp, flags):
     """
     Asserts that the given component is well-formed.
     """
@@ -81,11 +82,12 @@ def validate_component(comp):
     if "Flags" in comp:
         assert isinstance(comp["Flags"], dict)
         for key, val in comp["Flags"].items():
-            assert isinstance(key, str)
-            assert isinstance(val, bool)
+            assert key in flags, f"{key} is not a valid flag"
+            assert isinstance(key, str), comp
+            assert isinstance(val, bool), comp
 
     for attr in comp["Attributes"]:
-        validate_attribute(attr)
+        validate_attribute(attr, flags)
 
 
 def run(spec):
@@ -102,7 +104,9 @@ def run(spec):
     for flag in spec["Flags"]:
         validate_flag(flag)
 
+    flags = {flag["Name"] for flag in spec["Flags"]}
+
     for comp in spec["Components"]:
-        validate_component(comp)
+        validate_component(comp, flags)
 
     print("Schema Valid!")
