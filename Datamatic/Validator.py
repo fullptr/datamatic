@@ -13,7 +13,7 @@ COMP_KEYS_REQ = {
 
 
 COMP_KEYS_OPT = {
-    "Scriptable"
+    "Flags"
 }
 
 
@@ -26,9 +26,14 @@ ATTR_KEYS_REQ = {
 
 
 ATTR_KEYS_OPT = {
-    "Scriptable",
-    "Savable",
-    "Data",
+    "Flags",
+    "Custom"
+}
+
+
+FLAG_KEYS = {
+    "Name",
+    "Default"
 }
 
 
@@ -46,10 +51,20 @@ def validate_attribute(attr):
     assert cls is not None
     cls(attr["Default"]) # Will assert if invalid
 
-    if "Scriptable" in attr:
-        assert isinstance(attr["Scriptable"], bool), attr
-    if "Savable" in attr:
-        assert isinstance(attr["Savable"], bool), attr
+    if "Flags" in attr:
+        assert isinstance(attr["Flags"], dict)
+        for key, val in attr["Flags"].items():
+            assert isinstance(key, str)
+            assert isinstance(val, bool)
+
+
+def validate_flag(flag):
+    """
+    Asserts that the given flag is well-formed.
+    """
+    assert set(flag.keys()) == FLAG_KEYS
+    assert isinstance(flag["Name"], str)
+    assert isinstance(flag["Default"], bool)
 
 
 def validate_component(comp):
@@ -63,8 +78,11 @@ def validate_component(comp):
     assert isinstance(comp["DisplayName"], str), comp
     assert isinstance(comp["Attributes"], list), comp
 
-    if "Scriptable" in comp:
-        assert isinstance(comp["Scriptable"], bool)
+    if "Flags" in comp:
+        assert isinstance(comp["Flags"], dict)
+        for key, val in comp["Flags"].items():
+            assert isinstance(key, str)
+            assert isinstance(val, bool)
 
     for attr in comp["Attributes"]:
         validate_attribute(attr)
@@ -75,10 +93,14 @@ def run(spec):
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
     """
-    assert set(spec.keys()) == {"Version", "Components"}
+    assert set(spec.keys()) == {"Version", "Flags", "Components"}
 
     assert isinstance(spec["Version"], int)
+    assert isinstance(spec["Flags"], list)
     assert isinstance(spec["Components"], list)
+
+    for flag in spec["Flags"]:
+        validate_flag(flag)
 
     for comp in spec["Components"]:
         validate_component(comp)

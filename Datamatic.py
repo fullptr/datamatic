@@ -17,6 +17,17 @@ def discover(directory):
         spec.loader.exec_module(module)
 
 
+def fill_flag_defaults(spec):
+    defaults = {flag["Name"]: flag["Default"] for flag in spec["Flags"]}
+
+    for comp in spec["Components"]:
+        comp_flags = comp.get("Flags", {})
+        comp["Flags"] = {**defaults, **comp_flags}
+        for attr in comp["Attributes"]:
+            attr_flags = attr.get("Flags", {})
+            attr["Flags"] = {**defaults, **attr_flags}
+
+
 def parse_args():
     """
     Read the command line.
@@ -52,6 +63,8 @@ def main(args):
 
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
+
+    fill_flag_defaults(spec)
 
     Validator.run(spec)
 
