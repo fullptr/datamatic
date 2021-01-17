@@ -91,7 +91,7 @@ class String(Type):
     
    
 class Any(Type):
-    def __init__(self):
+    def __init__(self, val):
         pass
     
     def __repr__(self):
