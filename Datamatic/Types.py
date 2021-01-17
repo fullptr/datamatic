@@ -88,6 +88,18 @@ class String(Type):
     @staticmethod
     def typename():
         return "std::string"
+    
+   
+class Any(Type):
+    def __init__(self):
+        pass
+    
+    def __repr__(self):
+        return "std::any{}"
+    
+    @staticmethod
+    def typename():
+        return "std::any"
 
 
 def get(typename):
