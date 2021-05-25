@@ -23,13 +23,14 @@ def attrmethod(method):
     method.__type = "Attr"
     return classmethod(method)
 
+
+# BUITLIN PLUGINS
+
 class conditional(Plugin):
     @compmethod
     def if_nth_else(cls, comp, args, spec):
-        [n, success_token, fail_token] = args
-        if comp != spec["Components"][int(n)]:
-            return fail_token
-        return success_token
+        [n, yes_token, no_token] = args
+        return yes_token if comp == spec["Components"][int(n)] else no_token
 
     @compmethod
     def if_first(cls, comp, args, spec):
@@ -50,4 +51,3 @@ class conditional(Plugin):
     def if_not_last(cls, comp, args, spec):
         [token] = args
         return cls.if_nth_else(comp, ["-1", "", token], spec)
-        
