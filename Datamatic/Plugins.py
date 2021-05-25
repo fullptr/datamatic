@@ -16,54 +16,38 @@ class Plugin:
 
 def compmethod(method):
     method.__type = "Comp"
-    return staticmethod(method)
+    return classmethod(method)
 
 
 def attrmethod(method):
     method.__type = "Attr"
-    return staticmethod(method)
+    return classmethod(method)
 
-
-class format(Plugin):
+class conditional(Plugin):
     @compmethod
-    def if_first(comp, args, spec):
-        [token] = args
-        if comp != spec["Components"][0]:
-            return ""
-        return token
-
-    @compmethod
-    def if_not_first(comp, args, spec):
-        [token] = args
-        if comp == spec["Components"][0]:
-            return ""
-        return token
-
-    @compmethod
-    def if_last(comp, args, spec):
-        [token] = args
-        if comp != spec["Components"][-1]:
-            return ""
-        return token
-
-    @compmethod
-    def if_not_last(comp, args, spec):
-        [token] = args
-        if comp == spec["Components"][-1]:
-            return ""
-        return token
-
-    @compmethod
-    def if_nth(comp, args, spec):
-        [token, n] = args
+    def if_nth_else(cls, comp, args, spec):
+        [n, success_token, fail_token] = args
         if comp != spec["Components"][int(n)]:
-            return ""
-        return token
+            return fail_token
+        return success_token
 
     @compmethod
-    def if_not_nth(comp, args, spec):
-        [token, n] = args
-        if comp == spec["Components"][int(n)]:
-            return ""
-        return token
+    def if_first(cls, comp, args, spec):
+        [token] = args
+        return cls.if_nth_else(comp, ["0", token, ""], spec)
+
+    @compmethod
+    def if_not_first(cls, comp, args, spec):
+        [token] = args
+        return cls.if_nth_else(comp, ["0", "", token], spec)
+
+    @compmethod
+    def if_last(cls, comp, args, spec):
+        [token] = args
+        return cls.if_nth_else(comp, ["-1", token, ""], spec)
+
+    @compmethod
+    def if_not_last(cls, comp, args, spec):
+        [token] = args
+        return cls.if_nth_else(comp, ["-1", "", token], spec)
         
