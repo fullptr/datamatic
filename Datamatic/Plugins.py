@@ -13,6 +13,15 @@ class Plugin:
                 return c
         raise RuntimeError(f"Could not find plugin {name}")
 
+    @classmethod
+    def get_function(cls, namespace, plugin_name, function_name):
+        assert namespace in {"Comp", "Attr"}
+        
+        plugin = Plugin.get(plugin_name)
+        function = getattr(plugin, function_name)
+        assert function.__type == namespace
+        return function
+
 
 def compmethod(method):
     method.__type = "Comp"
