@@ -22,3 +22,16 @@ def compmethod(method):
 def attrmethod(method):
     method.__type = "Attr"
     return staticmethod(method)
+
+
+class format(Plugin):
+    @compmethod
+    def comma(comp, spec):
+        """
+        Returns a comma for all components except for the last one. This is
+        intended to be used for comma-separated lists with each element on a
+        separate line.
+        """
+        if comp == spec["Components"][-1]:
+            return ""
+        return ","
