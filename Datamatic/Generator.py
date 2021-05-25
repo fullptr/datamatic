@@ -10,6 +10,13 @@ ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
 
 
 def comp_repl(matchobj, spec, comp):
+    """
+    Either a standard access:
+    "Comp.<trait_name>"
+
+    Or a plugin call with optional args:
+    "Comp.<plugin_name>.<function_name>(|<argument>)*"
+    """
     symbols = matchobj.group(1)[2:-2].split(".")
     assert len(symbols) in {2, 3}
 
@@ -25,29 +32,46 @@ def comp_repl(matchobj, spec, comp):
         raise RuntimeError(f"Accessing invalid attr {trait}")
 
     elif len(symbols) == 3:
-        namespace, plugin_name, trait = symbols
+        namespace, plugin_name, trait_and_args = symbols
+        trait, *args = trait_and_args.split("|")
         assert namespace == "Comp"
 
         plugin = Plugin.get(plugin_name)
         func = getattr(plugin, trait)
         assert func.__type == "Comp"
 
-        # The function can either accept 1 argument or 2. The first
-        # argument is the current component. The optional second is the
-        # entire component spec
+        # The plugin function may request extra information by having
+        # certain parameters in the signature, here we now inspect the
+        # function signature and bind any requested information.
         sig = inspect.signature(func)
-        sig_len = len(sig.parameters)
-        assert sig_len in {1, 2}
-        if sig_len == 1:
-            return func(comp)
-        return func(comp, spec)
+
+        assert len(sig.parameters) > 0, f"Invalid function signature for {plugin_name}.{trait}, requires a 'comp' parameter"
+        
+        unknown_params = set(sig.parameters.keys()) - {"comp", "args", "spec"}
+        assert not unknown_params, f"Invalid parameter name(s) for {plugin_name}.{trait}: {','.join(unknown_params)}"
+        params = {}
+
+        # If the function has a "args" parameter, bind the
+        # args. If it doesn't assert that there were no args; if they
+        # are specified then they must at least be requested (the
+        # function may just ignore them).
+        if "args" in sig.parameters:
+            params["args"] = args
+        else:
+            assert len(args) == 0
+
+        # If the function requests the spec, then pass it in.
+        if "spec" in sig.parameters:
+            params["spec"] = spec
+
+        return func(comp, **params)
 
     else:
         raise RuntimeError(f"Invalid line {symbols}")
 
 
 def attr_repl(matchobj, spec, attr):
-    symbols = matchobj.group(1)[2:-2].split(".")
+    symbols = matchobj.group(1)[2:-2].replace(":", ".").split(".")
     assert len(symbols) in {2, 3}
 
     if len(symbols) == 2:

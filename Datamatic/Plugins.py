@@ -35,3 +35,10 @@ class format(Plugin):
         if comp == spec["Components"][-1]:
             return ""
         return ","
+
+    @compmethod
+    def if_not_last(comp, args, spec):
+        [token] = args
+        if comp == spec["Components"][-1]:
+            return ""
+        return token
