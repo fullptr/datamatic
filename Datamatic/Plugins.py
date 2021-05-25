@@ -51,12 +51,12 @@ class builtin(Plugin):
     # Accessors
 
     @compattrmethod
-    def Name(cls, comp):
-        return comp["Name"]
+    def Name(cls, obj):
+        return obj["Name"]
 
     @compattrmethod
-    def DisplayName(cls, comp):
-        return comp["DisplayName"]
+    def DisplayName(cls, obj):
+        return obj["DisplayName"]
 
     @attrmethod
     def Type(cls, attr):

@@ -57,32 +57,40 @@ def parse_token_string(raw_string: str) -> Token:
 
 
 def replace_token(matchobj, spec, obj):
+    """
+    Given a matchobj of the text that needs replacing, construct a token to find what
+    function needs to be called to get the replacement string.
+    
+    After finding the function, inspect its signature. It must have at least one parameter
+    and that is always bound to the object (component or attribute) currently in use.
+    
+    After the first parameter, the following other parameter names are allowed:
+        - spec: If specified, the entire component spec is bound to this parameter
+        - args: If specified, the arguments found in the Token are bound to this parameter.
+                Additionally, if there are arguments in the token but the function does not
+                have this parameter, an exception is raised. Conversely, if the function
+                expects args but there are none in the Token, an exception is raied.
+    """
     token = parse_token_string(matchobj.group(1))
     function = Plugin.get_function(token.namespace, token.plugin_name, token.function_name)
 
-    # The plugin function may request extra information by having
-    # certain parameters in the signature, here we now inspect the
-    # function signature and bind any requested information.
     sig = inspect.signature(function)
-
     assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
     
-    #unknown_params = set(sig.parameters.keys()) - {token.namespace.lower(), "args", "spec"}
-    #assert not unknown_params, f"Invalid parameter name(s) for {token}: {','.join(unknown_params)}"
+    _, *parameter_names = list(sig.parameters.keys())
+    unknowns = set(parameter_names) - {"args", "spec"}
+    assert not unknowns, f"Unknown parameters: {unknowns}"
+    
     params = {}
 
-    # If the function has a "args" parameter, bind the
-    # args. If it doesn't assert that there were no args; if they
-    # are specified then they must at least be requested (the
-    # function may just ignore them).
-    if "args" in sig.parameters:
+    if "spec" in parameter_names:
+        params["spec"] = spec
+
+    if "args" in parameter_names:
+        assert len(token.args) > 0
         params["args"] = token.args
     else:
         assert len(token.args) == 0
-
-    # If the function requests the spec, then pass it in.
-    if "spec" in sig.parameters:
-        params["spec"] = spec
 
     return function(obj, **params)
 
