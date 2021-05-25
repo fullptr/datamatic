@@ -5,8 +5,8 @@ from Datamatic.Plugins import Plugin
 from Datamatic import Types
 
 
-COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
-ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
+COMP_MATCH = re.compile(r"(\{\{Comp\..*?\}\})")
+ATTR_MATCH = re.compile(r"(\{\{Attr\..*?\}\})")
 
 
 def comp_repl(matchobj, spec, comp):
@@ -130,7 +130,10 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
+                old_line = line
                 line = COMP_MATCH.sub(partial(comp_repl, spec=spec, comp=comp), line)
+                if old_line == line:
+                    raise RuntimeError(f"Could not resolve line '{line}'")
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):

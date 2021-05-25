@@ -26,15 +26,25 @@ def attrmethod(method):
 
 class format(Plugin):
     @compmethod
-    def comma(comp, spec):
-        """
-        Returns a comma for all components except for the last one. This is
-        intended to be used for comma-separated lists with each element on a
-        separate line.
-        """
-        if comp == spec["Components"][-1]:
+    def if_first(comp, args, spec):
+        [token] = args
+        if comp != spec["Components"][0]:
             return ""
-        return ","
+        return token
+
+    @compmethod
+    def if_not_first(comp, args, spec):
+        [token] = args
+        if comp == spec["Components"][0]:
+            return ""
+        return token
+
+    @compmethod
+    def if_last(comp, args, spec):
+        [token] = args
+        if comp != spec["Components"][-1]:
+            return ""
+        return token
 
     @compmethod
     def if_not_last(comp, args, spec):
@@ -42,3 +52,18 @@ class format(Plugin):
         if comp == spec["Components"][-1]:
             return ""
         return token
+
+    @compmethod
+    def if_nth(comp, args, spec):
+        [token, n] = args
+        if comp != spec["Components"][int(n)]:
+            return ""
+        return token
+
+    @compmethod
+    def if_not_nth(comp, args, spec):
+        [token, n] = args
+        if comp == spec["Components"][int(n)]:
+            return ""
+        return token
+        
