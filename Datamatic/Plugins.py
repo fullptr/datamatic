@@ -42,6 +42,14 @@ def compattrmethod(method):
 
 
 class builtin(Plugin):
+    """
+    The default plugin. When parsing a token to replace, if there are only two parameters,
+    this is the assumed plugin. Contains simple accessors and some other helpers.
+    """
+
+
+    # Accessors
+
     @compattrmethod
     def Name(cls, comp):
         return comp["Name"]
@@ -60,7 +68,8 @@ class builtin(Plugin):
         return repr(cls(attr["Default"]))
 
 
-class conditional(Plugin):
+    # Conditional helpers
+
     @compmethod
     def if_nth_else(cls, comp, args, spec):
         [n, yes_token, no_token] = args
