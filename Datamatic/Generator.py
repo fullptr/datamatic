@@ -13,13 +13,14 @@ ATTR_MATCH = re.compile(r"(\{\{Attr\..*?\}\})")
 
 @dataclass(frozen=True)
 class Token:
+    raw_string: str
     namespace: Literal["Comp", "Attr"]
     plugin_name: str
     function_name: str
     args: Tuple[str]
 
 
-def parse_token_string(token_string: str) -> Token:
+def parse_token_string(raw_string: str) -> Token:
     """
     Format:
     "{{" ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]* "}}"
@@ -28,11 +29,11 @@ def parse_token_string(token_string: str) -> Token:
     "{{Comp.conditional.if_nth_else|2|,|.}}"
     "{{Comp.Name}}"
     """
-    assert token_string.startswith("{{")
-    assert token_string.endswith("}}")
+    assert raw_string.startswith("{{")
+    assert raw_string.endswith("}}")
 
-    *tokens, last_token = token_string[2:-2].split(".")
-    last_token, *args = last_token[-1].split("|")
+    *tokens, last_token = raw_string[2:-2].split(".")
+    last_token, *args = last_token.split("|")
     tokens = *tokens, last_token
     args = tuple(args)
 
@@ -44,9 +45,10 @@ def parse_token_string(token_string: str) -> Token:
         plugin_name = tokens[1]
         function_name = tokens[2]
     else:
-        raise RuntimeError(f"Invalid token {token_string}")
+        raise RuntimeError(f"Invalid token {raw_string}")
 
     return Token(
+        raw_string=raw_string,
         namespace=namespace,
         plugin_name=plugin_name,
         function_name=function_name,
@@ -106,12 +108,10 @@ def comp_repl(matchobj, spec, comp):
             if isinstance(value, str):
                 return value
 
-        raise RuntimeError(f"Accessing invalid attr {token.function_name}")
+        raise RuntimeError(f"Accessing invalid attr {token}")
 
     else:
         return plugin_repl(spec, comp, token)
-
-    raise RuntimeError(f"Invalid line {symbols}")
 
 
 def attr_repl(matchobj, spec, attr):
@@ -131,8 +131,6 @@ def attr_repl(matchobj, spec, attr):
 
     else:
         return plugin_repl(spec, attr, token)
-    
-    raise RuntimeError(f"Invalid line {symbols}")
 
 
 def get_attrs(comp, flags):

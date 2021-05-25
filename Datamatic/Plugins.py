@@ -16,20 +16,19 @@ class Plugin:
     @classmethod
     def get_function(cls, namespace, plugin_name, function_name):
         assert namespace in {"Comp", "Attr"}
-        
-        plugin = Plugin.get(plugin_name)
-        function = getattr(plugin, function_name)
-        assert function.__type == namespace
+
+        function = getattr(Plugin.get(plugin_name), function_name)
+        assert function._type == namespace
         return function
 
 
 def compmethod(method):
-    method.__type = "Comp"
+    method._type = "Comp"
     return classmethod(method)
 
 
 def attrmethod(method):
-    method.__type = "Attr"
+    method._type = "Attr"
     return classmethod(method)
 
 
