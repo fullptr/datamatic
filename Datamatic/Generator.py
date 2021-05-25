@@ -1,4 +1,5 @@
 import re
+import inspect
 from functools import partial
 from Datamatic.Plugins import Plugin
 from Datamatic import Types
@@ -8,7 +9,7 @@ COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
 ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
 
 
-def comp_repl(matchobj, comp, flags):
+def comp_repl(matchobj, spec, comp):
     symbols = matchobj.group(1)[2:-2].split(".")
     assert len(symbols) in {2, 3}
 
@@ -30,13 +31,22 @@ def comp_repl(matchobj, comp, flags):
         plugin = Plugin.get(plugin_name)
         func = getattr(plugin, trait)
         assert func.__type == "Comp"
-        return func(comp, flags)
+
+        # The function can either accept 1 argument or 2. The first
+        # argument is the current component. The optional second is the
+        # entire component spec
+        sig = inspect.signature(func)
+        sig_len = len(sig.parameters)
+        assert sig_len in {1, 2}
+        if sig_len == 1:
+            return func(comp)
+        return func(comp, spec)
 
     else:
         raise RuntimeError(f"Invalid line {symbols}")
 
 
-def attr_repl(matchobj, attr, flags):
+def attr_repl(matchobj, spec, attr):
     symbols = matchobj.group(1)[2:-2].split(".")
     assert len(symbols) in {2, 3}
 
@@ -62,7 +72,16 @@ def attr_repl(matchobj, attr, flags):
         plugin = Plugin.get(plugin_name)
         func = getattr(plugin, trait)
         assert func.__type == "Attr"
-        return func(attr, flags)
+
+        # The function can either accept 1 argument or 2. The first
+        # argument is the current component. The optional second is the
+        # entire component spec
+        sig = inspect.signature(func)
+        sig_len = len(sig.parameters)
+        assert sig_len in {1, 2}
+        if sig_len == 1:
+            return func(attr)
+        return func(attr, spec)
     
     else:
         raise RuntimeError(f"Invalid line {symbols}")
@@ -87,13 +106,13 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = COMP_MATCH.sub(partial(comp_repl, comp=comp, flags=flags), line)
+                line = COMP_MATCH.sub(partial(comp_repl, spec=spec, comp=comp), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = ATTR_MATCH.sub(partial(attr_repl, attr=attr, flags=flags), newline)
+                        newline = ATTR_MATCH.sub(partial(attr_repl, spec=spec, attr=attr), newline)
                     out += newline + "\n"
             else:
                 out += line + "\n"
