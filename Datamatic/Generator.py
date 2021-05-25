@@ -130,16 +130,14 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                old_line = line
                 line = COMP_MATCH.sub(partial(comp_repl, spec=spec, comp=comp), line)
-                if old_line == line:
-                    raise RuntimeError(f"Could not resolve line '{line}'")
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
                         newline = ATTR_MATCH.sub(partial(attr_repl, spec=spec, attr=attr), newline)
+
                     out += newline + "\n"
             else:
                 out += line + "\n"
