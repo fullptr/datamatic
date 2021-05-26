@@ -27,7 +27,7 @@ def parse_token_string(raw_string: str) -> Token:
 
     Examples:
     "{{Comp.conditional.if_nth_else|2|,|.}}"
-    "{{Comp.Name}}"
+    "{{Comp.name}}"
     """
     assert raw_string.startswith("{{")
     assert raw_string.endswith("}}")
