@@ -51,19 +51,19 @@ class builtin(Plugin):
     # Accessors
 
     @compattrmethod
-    def Name(cls, obj):
+    def name(cls, obj):
         return obj["Name"]
 
     @compattrmethod
-    def DisplayName(cls, obj):
+    def display_name(cls, obj):
         return obj["DisplayName"]
 
     @attrmethod
-    def Type(cls, attr):
+    def type(cls, attr):
         return attr["Type"]
 
     @attrmethod
-    def Default(cls, attr):
+    def default(cls, attr):
         cls = Types.get(attr["Type"])
         return repr(cls(attr["Default"]))
 
