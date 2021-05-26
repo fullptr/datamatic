@@ -1,71 +1,98 @@
 import re
+import inspect
+from typing import Tuple, Literal
+from dataclasses import dataclass
 from functools import partial
 from Datamatic.Plugins import Plugin
 from Datamatic import Types
 
 
-COMP_MATCH = re.compile(r"(\{\{Comp\.[a-zA-Z \.\(\)]*\}\})")
-ATTR_MATCH = re.compile(r"(\{\{Attr\.[a-zA-Z \.\(\)]*\}\})")
+COMP_MATCH = re.compile(r"(\{\{Comp\..*?\}\})")
+ATTR_MATCH = re.compile(r"(\{\{Attr\..*?\}\})")
 
 
-def comp_repl(matchobj, comp, flags):
-    symbols = matchobj.group(1)[2:-2].split(".")
-    assert len(symbols) in {2, 3}
+@dataclass(frozen=True)
+class Token:
+    raw_string: str
+    namespace: Literal["Comp", "Attr"]
+    plugin_name: str
+    function_name: str
+    args: Tuple[str]
 
-    if len(symbols) == 2:
-        namespace, trait = symbols
-        assert namespace == "Comp" 
 
-        if value := comp.get(trait):
-            if isinstance(value, bool):
-                return "true" if value else "false"
-            if isinstance(value, str):
-                return value
-        raise RuntimeError(f"Accessing invalid attr {trait}")
+def parse_token_string(raw_string: str) -> Token:
+    """
+    Format:
+    "{{" ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]* "}}"
 
-    elif len(symbols) == 3:
-        namespace, plugin_name, trait = symbols
-        assert namespace == "Comp"
+    Examples:
+    "{{Comp.conditional.if_nth_else|2|,|.}}"
+    "{{Comp.name}}"
+    """
+    assert raw_string.startswith("{{")
+    assert raw_string.endswith("}}")
 
-        plugin = Plugin.get(plugin_name)
-        func = getattr(plugin, trait)
-        assert func.__type == "Comp"
-        return func(comp, flags)
+    *tokens, last_token = raw_string[2:-2].split(".")
+    last_token, *args = last_token.split("|")
+    tokens = *tokens, last_token
+    args = tuple(args)
 
+    namespace = tokens[0]
+    if len(tokens) == 2:
+        plugin_name = "builtin"
+        function_name = tokens[1]
+    elif len(tokens) == 3:
+        plugin_name = tokens[1]
+        function_name = tokens[2]
     else:
-        raise RuntimeError(f"Invalid line {symbols}")
+        raise RuntimeError(f"Invalid token {raw_string}")
+
+    return Token(
+        raw_string=raw_string,
+        namespace=namespace,
+        plugin_name=plugin_name,
+        function_name=function_name,
+        args=args
+    )
 
 
-def attr_repl(matchobj, attr, flags):
-    symbols = matchobj.group(1)[2:-2].split(".")
-    assert len(symbols) in {2, 3}
-
-    if len(symbols) == 2:
-        namespace, trait = symbols
-        assert namespace == "Attr" 
-
-        if trait == "Default":
-            cls = Types.get(attr["Type"])
-            return repr(cls(attr[trait]))
-        
-        if value := attr.get(trait):
-            if isinstance(value, bool):
-                return "true" if value else "false"
-            if isinstance(value, str):
-                return value
-        raise RuntimeError(f"Accessing invalid attr {trait}")
-
-    elif len(symbols) == 3:
-        namespace, plugin_name, trait = symbols
-        assert namespace == "Attr"
-
-        plugin = Plugin.get(plugin_name)
-        func = getattr(plugin, trait)
-        assert func.__type == "Attr"
-        return func(attr, flags)
+def replace_token(matchobj, spec, obj):
+    """
+    Given a matchobj of the text that needs replacing, construct a token to find what
+    function needs to be called to get the replacement string.
     
+    After finding the function, inspect its signature. It must have at least one parameter
+    and that is always bound to the object (component or attribute) currently in use.
+    
+    After the first parameter, the following other parameter names are allowed:
+        - spec: If specified, the entire component spec is bound to this parameter
+        - args: If specified, the arguments found in the Token are bound to this parameter.
+                Additionally, if there are arguments in the token but the function does not
+                have this parameter, an exception is raised. Conversely, if the function
+                expects args but there are none in the Token, an exception is raied.
+    """
+    token = parse_token_string(matchobj.group(1))
+    function = Plugin.get_function(token.namespace, token.plugin_name, token.function_name)
+
+    sig = inspect.signature(function)
+    assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
+    
+    _, *parameter_names = list(sig.parameters.keys())
+    unknowns = set(parameter_names) - {"args", "spec"}
+    assert not unknowns, f"Unknown parameters: {unknowns}"
+    
+    params = {}
+
+    if "spec" in parameter_names:
+        params["spec"] = spec
+
+    if "args" in parameter_names:
+        assert len(token.args) > 0
+        params["args"] = token.args
     else:
-        raise RuntimeError(f"Invalid line {symbols}")
+        assert len(token.args) == 0
+
+    return function(obj, **params)
 
 
 def get_attrs(comp, flags):
@@ -87,13 +114,14 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = COMP_MATCH.sub(partial(comp_repl, comp=comp, flags=flags), line)
+                line = COMP_MATCH.sub(partial(replace_token, spec=spec, obj=comp), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = ATTR_MATCH.sub(partial(attr_repl, attr=attr, flags=flags), newline)
+                        newline = ATTR_MATCH.sub(partial(replace_token, spec=spec, obj=attr), newline)
+
                     out += newline + "\n"
             else:
                 out += line + "\n"
