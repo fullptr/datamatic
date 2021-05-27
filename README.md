@@ -1,22 +1,16 @@
 # Datamatic
-
 A python package for generating C++ and Lua source code.
 
 ## Motivation
+As part of another project, I am using an [Entity Component System](https::github.com/MagicLemms/apecs). However, I kept finding areas where I needed to loop over all component types to implement logic, for example, exposing components to Lua, and displaying them withing an ImGui editor window. This made adding new components very cumbersome, as there would be several different areas of the code that would need updating.
 
-This is a tool designed to help with another project of mine where I am creating a game engine from scratch. That engine uses an ECS (Entity Component System), and
-I kept finding areas where I needed to loop over all component types to implement logic, for example, exposing components to Lua, and displaying them withing an ImGui
-editor window. This made adding new components very cumbersome.
-
-With this tool, components can be defined in a json file, and C++ and Lua source templates can be provided which will be used to generate the actual files with the
-components added in. I'm aware there existing tools out there for this job, but I thought it would be a fun exercise to implement my own.
-
+With this tool, components can be defined in a json file, and C++ and Lua source templates can be provided which will be used to generate the actual files with the components added in. With this approach, adding a new component is trivial; I just add it to the json component spec and rerun the tool and all the source code will be generated.
 
 ## Usage
 
 Running Datamatic is very simple. It has no external dependencies so can just be cloned and ran on a repository as follows:
 ```
-python3.8 Datamatic.py --spec <path/to/json/spec> --dir <path/to/project>
+python Datamatic.py --spec <path/to/json/spec> --dir <path/to/project>
 ```
 
 Datamatic will then recurse through the entire directory looking for files with extensions `*.dm.*`, and use those as templates for generating source code, which it 
