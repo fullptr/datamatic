@@ -256,11 +256,55 @@ For some plugin functions, it is not enough to simply have the current component
     @compmethod
     def if_not_last(cls, comp, args, spec):
         assert len(args) == 1
-        symbol = args[0]
-        if comp != spec["components"][-1]:
-            return symbol
-        return "" 
+        return args[0] if comp != spec["components"][-1] else ""
 ```
+
+### Custom Data
+It is also sometimes useful to tag components and attributes with custom data to be used within plugins. For this, the spec schema allows for a `custom` field which is not checked. This can be used to have any kind of information that you want. As an example, suppose you are creating a level editor and want a GUI for entity modification creating with [ImGUI](https://github.com/ocornut/imgui). You could create a plugin that returns ImGUI function calls for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
+```json
+{
+    "name": "LightComponent",
+    "display_name": "Light",
+    "attributes": [
+        {
+            "name": "position",
+            "display_name": "Light Position",
+            "type": "glm::vec3",
+            "default": [0.0, 0.0, 0.0],
+            "custom": {
+                "is_colour": false,
+                "drag_speed": 0.1
+            }
+        },
+        {
+            "name": "colour",
+            "display_name": "Light Colour",
+            "type": "glm::vec3",
+            "default": [1.0, 1.0, 1.0],
+            "custom": {
+                "is_colour": true
+            }
+        }
+    ]
+}
+```
+Then in the plugin you could write
+```py
+class Imgui(Plugin):
+    @attrmethod
+    def interface_function(cls, attr):
+        name = attr["name"]
+        display_name = attr["display_name"]
+        ...
+        if attr["type"] == "glm::vec3":
+            if attr["custom"]["is_colour"]:
+                return f'ImGui::ColorEdit3("{display_name}", &component.{name})'
+            else:
+                drag_speed = attr["custom"]["drag_speed"]
+                return f'ImGui::DragFloat3("{display_name}", &component.{name}, drag_speed)'
+        ...
+```
+I've included drag speed here to emphasise that custom data can be any kind of JSON object so it is not the same as flags and both have different use cases.
 
 ## Future
 * Have a nicer syntax for plugin function parameters as the pipe is a bit ugly. The current setup also cannot allow for passing a pipe symbol as a parameter.
