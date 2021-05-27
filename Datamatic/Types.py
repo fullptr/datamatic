@@ -3,7 +3,7 @@ A module that holds CppType, a base class for classes that represent
 C++ types. Users can subclass this to add their own types to
 Datamatic.
 """
-import inspect
+import functools
 
 
 class SingleDispatch:
@@ -19,12 +19,12 @@ class SingleDispatch:
             return self.func(first, *args, **kwargs)
         return self.dispatchers[first](first, *args, **kwargs)
 
-    def register(self, first):
+    def register(self, first, **kwargs):
         def decorator(func):
-            assert inspect.signature(func) == inspect.signature(self.func)
             assert first not in self.dispatchers, f"'{first}' already has a registered parser"
-            self.dispatchers[first] = func
-            return func
+            new_func = functools.partial(func, **kwargs)
+            self.dispatchers[first] = new_func
+            return new_func
         return decorator
 
 
