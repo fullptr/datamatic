@@ -174,6 +174,45 @@ def _(typename, obj) -> str:
 ```
 With this in your codebase, `Types.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type.
 
+### Registering the same parser for different types
+Consider the implementations of `glm::vec4` and `glm::quat`. They are both essentially a vector of four elements, so they can both use the same parser:
+```py
+from Datamatic.Types import parse
+
+@parse.register("glm::vec4")
+@parse.register("glm::quat")
+def _(typename, obj) -> str:
+    assert isinstance(obj, list)
+    assert len(obj) == 4
+    rep = ", ".join(parse("float", val) for val in obj)
+    return f"{typename}{{{rep}}}"
+```
+
+### Parametrising parser functions
+If you look at the above example, the implementation is the exact same as for `glm::vec3` except for the length check. It is also possible to have extra arguments to the parser to parametrise these. The values can then be passed in via the decorator. Thus it is possible to have all three of the above types use the same parser, along with `glm::vec2`:
+```py
+from Datamatic.Types import parse
+
+@parse.register("glm::vec2", length=2)
+@parse.register("glm::vec3", length=3)
+@parse.register("glm::vec4", length=4)
+@parse.register("glm::quat", length=4)
+def _(typename, obj, length) -> str:
+    assert isinstance(obj, list)
+    assert len(obj) == length
+    rep = ", ".join(parse("float", val) for val in obj)
+    return f"{typename}{{{rep}}}"
+```
+
+These extra parameters can also have default values which will be used if they are not specified in the decorator:
+```py
+@parse.register("glm::vec2", length=2)
+@parse.register("glm::vec3", length=3)
+@parse.register("glm::vec4")
+@parse.register("glm::quat")
+def _(typename, obj, length=4) -> str: ...
+```
+
 ## Plugins
 As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic exposes a `Plugin` base class which can be subclassed in `dmx` files which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
