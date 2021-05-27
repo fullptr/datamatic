@@ -6,34 +6,34 @@ from Datamatic import Types
 
 
 COMP_KEYS_REQ = {
-    "Name",
-    "DisplayName",
-    "Attributes"
+    "name",
+    "display_name",
+    "attributes"
 }
 
 
 COMP_KEYS_OPT = {
-    "Flags"
+    "flags"
 }
 
 
 ATTR_KEYS_REQ = {
-    "Name",
-    "DisplayName",
-    "Type",
-    "Default"
+    "name",
+    "display_name",
+    "type",
+    "default"
 }
 
 
 ATTR_KEYS_OPT = {
-    "Flags",
+    "flags",
     "Custom"
 }
 
 
 FLAG_KEYS = {
-    "Name",
-    "Default"
+    "name",
+    "default"
 }
 
 
@@ -44,16 +44,16 @@ def validate_attribute(attr, flags):
     assert ATTR_KEYS_REQ <= set(attr.keys()), attr
     assert set(attr.keys()) <= ATTR_KEYS_REQ | ATTR_KEYS_OPT, attr
 
-    assert isinstance(attr["Name"], str), attr
-    assert isinstance(attr["DisplayName"], str), attr
+    assert isinstance(attr["name"], str), attr
+    assert isinstance(attr["display_name"], str), attr
 
-    cls = Types.get(attr["Type"])
+    cls = Types.get(attr["type"])
     assert cls is not None
-    cls(attr["Default"]) # Will assert if invalid
+    cls(attr["default"]) # Will assert if invalid
 
-    if "Flags" in attr:
-        assert isinstance(attr["Flags"], dict)
-        for key, val in attr["Flags"].items():
+    if "flags" in attr:
+        assert isinstance(attr["flags"], dict)
+        for key, val in attr["flags"].items():
             assert key in flags, f"{key} is not a valid flag"
             assert isinstance(key, str), attr
             assert isinstance(val, bool), attr
@@ -64,8 +64,8 @@ def validate_flag(flag):
     Asserts that the given flag is well-formed.
     """
     assert set(flag.keys()) == FLAG_KEYS, flag
-    assert isinstance(flag["Name"], str), flag
-    assert isinstance(flag["Default"], bool), flag
+    assert isinstance(flag["name"], str), flag
+    assert isinstance(flag["default"], bool), flag
 
 
 def validate_component(comp, flags):
@@ -75,18 +75,18 @@ def validate_component(comp, flags):
     assert COMP_KEYS_REQ <= set(comp.keys()), comp
     assert set(comp.keys()) <= COMP_KEYS_REQ | COMP_KEYS_OPT, comp
 
-    assert isinstance(comp["Name"], str), comp
-    assert isinstance(comp["DisplayName"], str), comp
-    assert isinstance(comp["Attributes"], list), comp
+    assert isinstance(comp["name"], str), comp
+    assert isinstance(comp["display_name"], str), comp
+    assert isinstance(comp["attributes"], list), comp
 
-    if "Flags" in comp:
-        assert isinstance(comp["Flags"], dict)
-        for key, val in comp["Flags"].items():
+    if "flags" in comp:
+        assert isinstance(comp["flags"], dict)
+        for key, val in comp["flags"].items():
             assert key in flags, f"{key} is not a valid flag"
             assert isinstance(key, str), comp
             assert isinstance(val, bool), comp
 
-    for attr in comp["Attributes"]:
+    for attr in comp["attributes"]:
         validate_attribute(attr, flags)
 
 
@@ -95,18 +95,17 @@ def run(spec):
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
     """
-    assert set(spec.keys()) == {"Version", "Flags", "Components"}
+    assert set(spec.keys()) == {"flags", "components"}
 
-    assert isinstance(spec["Version"], int)
-    assert isinstance(spec["Flags"], list)
-    assert isinstance(spec["Components"], list)
+    assert isinstance(spec["flags"], list)
+    assert isinstance(spec["components"], list)
 
-    for flag in spec["Flags"]:
+    for flag in spec["flags"]:
         validate_flag(flag)
 
-    flags = {flag["Name"] for flag in spec["Flags"]}
+    flags = {flag["name"] for flag in spec["flags"]}
 
-    for comp in spec["Components"]:
+    for comp in spec["components"]:
         validate_component(comp, flags)
 
     print("Schema Valid!")

@@ -52,20 +52,20 @@ class builtin(Plugin):
 
     @compattrmethod
     def name(cls, obj):
-        return obj["Name"]
+        return obj["name"]
 
     @compattrmethod
     def display_name(cls, obj):
-        return obj["DisplayName"]
+        return obj["display_name"]
 
     @attrmethod
     def type(cls, attr):
-        return attr["Type"]
+        return attr["type"]
 
     @attrmethod
     def default(cls, attr):
-        cls = Types.get(attr["Type"])
-        return repr(cls(attr["Default"]))
+        cls = Types.get(attr["type"])
+        return repr(cls(attr["default"]))
 
 
     # Conditional helpers
@@ -73,7 +73,7 @@ class builtin(Plugin):
     @compmethod
     def if_nth_else(cls, comp, args, spec):
         [n, yes_token, no_token] = args
-        return yes_token if comp == spec["Components"][int(n)] else no_token
+        return yes_token if comp == spec["components"][int(n)] else no_token
 
     @compmethod
     def if_first(cls, comp, args, spec):

@@ -94,14 +94,14 @@ def replace_token(matchobj, spec, obj):
 def get_attrs(comp, flags):
     attrs = comp["Attributes"]
     for key, value in flags.items():
-        attrs = [x for x in attrs if x["Flags"][key] == value]
+        attrs = [x for x in attrs if x["flags"][key] == value]
     return attrs
 
 
 def get_comps(spec, flags):
-    comps = spec["Components"]
+    comps = spec["components"]
     for key, value in flags.items():
-        comps = [x for x in comps if x["Flags"][key] == value]
+        comps = [x for x in comps if x["flags"][key] == value]
     return comps
 
 
