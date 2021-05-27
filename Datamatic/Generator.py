@@ -91,17 +91,15 @@ def replace_token(matchobj, spec, obj):
 
 
 def get_attrs(comp, flags):
-    attrs = comp["attributes"]
-    for key, value in flags.items():
-        attrs = [x for x in attrs if x["flags"][key] == value]
-    return attrs
+    for attr in comp["attributes"]:
+        if all(attr['flags'][key] == value for key, value in flags.items()):
+            yield attr
 
 
 def get_comps(spec, flags):
-    comps = spec["components"]
-    for key, value in flags.items():
-        comps = [x for x in comps if x["flags"][key] == value]
-    return comps
+    for comp in spec["components"]:
+        if all(comp['flags'][key] == value for key, value in flags.items()):
+            yield comp
 
 
 def process_block(spec, block, flags):
