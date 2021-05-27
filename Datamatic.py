@@ -1,12 +1,12 @@
 """
-A tool for generating code based on a schema of Components.
+A tool for generating code based on a schema of components.
 """
 import json
 import argparse
 import pathlib
 import sys
 import importlib.util
-from Datamatic import Plugins, Validator, Generator
+from Datamatic import Validator, Generator
 
 
 def discover(directory):
@@ -18,14 +18,14 @@ def discover(directory):
 
 
 def fill_flag_defaults(spec):
-    defaults = {flag["Name"]: flag["Default"] for flag in spec["Flags"]}
+    defaults = {flag["name"]: flag["default"] for flag in spec["flags"]}
 
-    for comp in spec["Components"]:
-        comp_flags = comp.get("Flags", {})
-        comp["Flags"] = {**defaults, **comp_flags}
-        for attr in comp["Attributes"]:
-            attr_flags = attr.get("Flags", {})
-            attr["Flags"] = {**defaults, **attr_flags}
+    for comp in spec["components"]:
+        comp_flags = comp.get("flags", {})
+        comp["flags"] = {**defaults, **comp_flags}
+        for attr in comp["attributes"]:
+            attr_flags = attr.get("flags", {})
+            attr["flags"] = {**defaults, **attr_flags}
 
 
 def parse_args():

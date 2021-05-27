@@ -7,8 +7,7 @@ from Datamatic.Plugins import Plugin
 from Datamatic import Types
 
 
-COMP_MATCH = re.compile(r"(\{\{Comp\..*?\}\})")
-ATTR_MATCH = re.compile(r"(\{\{Attr\..*?\}\})")
+TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
 
 @dataclass(frozen=True)
@@ -23,16 +22,13 @@ class Token:
 def parse_token_string(raw_string: str) -> Token:
     """
     Format:
-    "{{" ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]* "}}"
+    ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]*
 
     Examples:
-    "{{Comp.conditional.if_nth_else|2|,|.}}"
-    "{{Comp.name}}"
+    "Comp.conditional.if_nth_else|2|,|."
+    "Comp.name"
     """
-    assert raw_string.startswith("{{")
-    assert raw_string.endswith("}}")
-
-    *tokens, last_token = raw_string[2:-2].split(".")
+    *tokens, last_token = raw_string.split(".")
     last_token, *args = last_token.split("|")
     tokens = *tokens, last_token
     args = tuple(args)
@@ -96,16 +92,16 @@ def replace_token(matchobj, spec, obj):
 
 
 def get_attrs(comp, flags):
-    attrs = comp["Attributes"]
+    attrs = comp["attributes"]
     for key, value in flags.items():
-        attrs = [x for x in attrs if x["Flags"][key] == value]
+        attrs = [x for x in attrs if x["flags"][key] == value]
     return attrs
 
 
 def get_comps(spec, flags):
-    comps = spec["Components"]
+    comps = spec["components"]
     for key, value in flags.items():
-        comps = [x for x in comps if x["Flags"][key] == value]
+        comps = [x for x in comps if x["flags"][key] == value]
     return comps
 
 
@@ -114,13 +110,13 @@ def process_block(spec, block, flags):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = COMP_MATCH.sub(partial(replace_token, spec=spec, obj=comp), line)
+                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = ATTR_MATCH.sub(partial(replace_token, spec=spec, obj=attr), newline)
+                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr), newline)
 
                     out += newline + "\n"
             else:
