@@ -3,7 +3,6 @@ A module that holds CppType, a base class for classes that represent
 C++ types. Users can subclass this to add their own types to
 Datamatic.
 """
-from functools import wraps
 
 
 PARSERS = {}
@@ -23,7 +22,7 @@ def register(typename):
     Functions that can be registered should have the signature (str, json_object).
     """
     def decorator(func):
-        assert typename not in PARSERS
+        assert typename not in PARSERS, f"'{typename}' already has a registered parser"
         PARSERS[typename] = func
         return func
     return decorator
