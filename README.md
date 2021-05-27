@@ -166,10 +166,11 @@ from Datamatic.Types import parse
 
 @parse.register("glm::vec3")
 def _(typename, obj) -> str:
+    # For this implementation, typename == "glm::vec3"
     assert isinstance(obj, list)
     assert len(obj) == 3
     rep = ", ".join(parse("float", val) for val in obj)
-    return f"{typename}{{{rep}}}" # Here, typename == "glm::vec3"
+    return f"{typename}{{{rep}}}"
 ```
 With this in your codebase, `Types.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type.
 
