@@ -4,7 +4,6 @@ from typing import Tuple, Literal
 from dataclasses import dataclass
 from functools import partial
 from Datamatic.Plugins import Plugin
-from Datamatic import Types
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")

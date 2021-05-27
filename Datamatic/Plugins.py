@@ -64,8 +64,7 @@ class builtin(Plugin):
 
     @attrmethod
     def default(cls, attr):
-        cls = Types.get(attr["type"])
-        return repr(cls(attr["default"]))
+        return Types.parse(attr["type"], attr["default"])
 
 
     # Conditional helpers

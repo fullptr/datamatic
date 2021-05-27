@@ -2,7 +2,7 @@
 Validates a given schema to make sure it is well-formed. This should
 also serve as documentation for what makes a valid schema.
 """
-from Datamatic import Types
+from Datamatic import Plugins
 
 
 COMP_KEYS_REQ = {
@@ -47,9 +47,8 @@ def validate_attribute(attr, flags):
     assert isinstance(attr["name"], str), attr
     assert isinstance(attr["display_name"], str), attr
 
-    cls = Types.get(attr["type"])
-    assert cls is not None
-    cls(attr["default"]) # Will assert if invalid
+    # Verify that accessing the default value succeeds.
+    Plugins.builtin.default(attr)
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)
