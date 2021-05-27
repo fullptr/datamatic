@@ -114,27 +114,7 @@ struct TransformComponent
 
 ```
 
-## Types
-One important thing needed for an effective code generator is the ability to convert a representation of an object from one form into another. In datamatic, this conversion is mainly from python/json to C++, with the prime example being the `default` attribute in the spec file being a json object that needs to be represented in C++. Datamatic provides the function `Types.parse` for carrying out this conversions. This function is inspired by the `@functools.singledispatch` decorator in the standard library, and can be extended with custom types, as shown below.
-
-The basic types that are currently supported by default are `int`, `float`, `double`, `bool` and `std::string`. Notice in the above example the `TransformComponent` uses glm maths types. Extensions to the parse function are done by creating `*.dmx.py` files. When datamatic recurses through your repository to scan for templates, it also scans for these `dmx` files. Any that are found are imported. Datamatic exposes a decorator called `Types.register` that lets you register a function for parsing a json object into a particular type.
-
-Parsing functions take two parameters; the first being the name of the type in C++, and the second being the json object. The return value should be a string of C++ code.
-
-As an example of a parsing function for `glm::vec3`:
-```py
-from Datamatic.Types import register, parse
-
-@register("glm::vec3")
-def _(typename, obj) -> str:
-    assert isinstance(obj, list)
-    assert len(obj) == 3
-    rep = ", ".join(parse("float", val) for val in obj)
-    return f"{typename}{{{rep}}}" # Here, typename == "glm::vec3"
-```
-After registering a parser function, it can be called as `Types.parse(typename, obj)`. Notice that the above example uses `parse` to convert subobjects to C++ floats; type definitions can refer to other types.
-
-### Flags
+## Flags
 You may have noticed in the spec file above that it contained a `flags` top level attribute. Flags provide a way to set boolean flags on components and attributes which can be used to ignore certain components/attributes in template blocks. For example, when saving a game, we may not want the health of entities to be saved (not a great example but it work to demonstrate the point). We can declare a flag called `SERIALISABLE` in the spec file in the following way
 ```json
 {
@@ -166,13 +146,40 @@ If a flag is not specified for a component or attribute, the default value is us
 ```
 Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
 
+## Custom Extensions
+By default, datamatic's runtime is quite basic, and you will most likely find yourself needing to extend it with code that is meaningful only for your codebase. For instance
+* You may want your own custom types to be data members of your components
+* You may require more complex code to be generated that cannot be expressed in datamatic's simplistic syntax
+
+Datamatic exposes some hooks that allows you to enhance it with your own python code. Simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. The hooks that you have access to here are described below.
+
+## Types
+One important thing needed for an effective code generator is the ability to convert a representation of an object from one form into another. In datamatic, this conversion is mainly from python/json to C++, with the prime example being the `default` attribute in the spec file being a json object that needs to be represented in C++. Datamatic uses the function `Types.parse(typename: str, json_object) -> str` for carrying out these conversions.
+
+By default, the function is only defined when `typename` is either `"int"`, `"float"`, `"double"`, `"bool"` or `"std::string"`. Any other type results in a `RuntimeError`. However, this function can be extended by registering other types (notice in the above example the `TransformComponent` uses glm maths types). This is inspired by the `@functools.singledispatch` decorator in the standard library. Single dispatch is a form of polymorphism usually implemented based on the type of the first argument, however here we are dispatching based on the *value* of the first argument.
+
+`parse` can be extended by using the `parse.register` decoratore. These extensions are done via a `dmx` file.
+
+An example of a `dmx` file that extends `Types.parse` for `glm::vec3`:
+```py
+from Datamatic.Types import parse
+
+@parse.register("glm::vec3")
+def _(typename, obj) -> str:
+    # For this implementation, typename == "glm::vec3"
+    assert isinstance(obj, list)
+    assert len(obj) == 3
+    rep = ", ".join(parse("float", val) for val in obj)
+    return f"{typename}{{{rep}}}"
+```
+With this in your codebase, `Types.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type.
+
 ## Plugins
-As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic also exposes a `Plugin` base class which can be subclassed in the `.dmx.py` files too which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following
+As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic exposes a `Plugin` base class which can be subclassed in `dmx` files which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
 from Datamatic.Plugins import Plugin
 
 class Upper(Plugin):
-
     @compmethod
     def upper_name(cls, comp):
         return comp["name"].upper()
@@ -219,6 +226,8 @@ class builtin(Plugin):
 Note this uses `@compattrmethod` because it can also be used to access the name of an attribute. This is done primarily for two reasons:
 * It makes "Attribute access" and "Plugin function" all uniform, which simplifies the implementation.
 * It allows datamatic to add more builtin functions in an entensible way.
+
+The `builtin` plugin also has some extra functionality and can be found [here](Datamatic/Plugins.py).
 
 ### Plugin Function Arguments
 It is also possible to pass arguments to plugin functions using a `|` pipe syntax. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp.if_not_last` function:
@@ -302,8 +311,12 @@ class Imgui(Plugin):
 ```
 I've included drag speed here to emphasise that custom data can be any kind of JSON object so it is not the same as flags and both have different use cases.
 
+With the ability to generate template code using the full power of python, it should be possible to generate any kind of code you want. If there are still limitations, let me know, I would love to extend datamatic further to make it more useful!
+
 ## Future
 * Have a nicer syntax for plugin function parameters as the pipe is a bit ugly. The current setup also cannot allow for passing a pipe symbol as a parameter.
 * Extend the builtin plugin to provide more useful functionality.
 * Support for more C++ standard types.
 * Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic, but there are some C++ specific things. These things include the `#ifdef DATAMATIC_BLOCK` and the `Type` API. The reason I can use this for Lua is because you don't explicitly mention types so the `Type` API isn't a problem, and I don't make use of intellisense for Lua so the invalid syntax doesn't produce errors.
+* I've considered having inline python code in the templates akin to using `eval`, which is often seen as dangerous, but we are already executing arbitrary code via the `dmx` system, so maybe it's no worse. I'm also considering going the other way and removing the discovery system and making users have to specify the extension files on the command line instead, but I haven't reached a conclusion here.
+* A unit testing suite and some integration tests that can be run to show off the generator.
