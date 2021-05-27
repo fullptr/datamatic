@@ -27,7 +27,7 @@ ATTR_KEYS_REQ = {
 
 ATTR_KEYS_OPT = {
     "flags",
-    "Custom"
+    "custom"
 }
 
 

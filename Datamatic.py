@@ -23,7 +23,7 @@ def fill_flag_defaults(spec):
     for comp in spec["components"]:
         comp_flags = comp.get("flags", {})
         comp["flags"] = {**defaults, **comp_flags}
-        for attr in comp["Attributes"]:
+        for attr in comp["attributes"]:
             attr_flags = attr.get("flags", {})
             attr["flags"] = {**defaults, **attr_flags}
 
