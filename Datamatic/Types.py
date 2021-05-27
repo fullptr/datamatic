@@ -15,16 +15,13 @@ class SingleDispatch:
         self.dispatchers = {}
 
     def __call__(self, first, *args, **kwargs):
-        if first not in self.dispatchers:
-            return self.func(first, *args, **kwargs)
-        return self.dispatchers[first](first, *args, **kwargs)
+        return self.dispatchers.get(first, self.func)(first, *args, **kwargs)
 
     def register(self, first, **kwargs):
         def decorator(func):
             assert first not in self.dispatchers, f"'{first}' already has a registered parser"
-            new_func = functools.partial(func, **kwargs)
-            self.dispatchers[first] = new_func
-            return new_func
+            self.dispatchers[first] = functools.partial(func, **kwargs)
+            return func
         return decorator
 
 
