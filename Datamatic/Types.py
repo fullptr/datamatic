@@ -3,38 +3,47 @@ A module that holds CppType, a base class for classes that represent
 C++ types. Users can subclass this to add their own types to
 Datamatic.
 """
+import inspect
 
 
-PARSERS = {}
+class SingleDispatch:
+    """
+    A decorator class designed to implement single dispatch on the first argument of a function.
+    """
+    def __init__(self, func):
+        self.func = func
+        self.dispatchers = {}
+
+    def __call__(self, first, *args, **kwargs):
+        if first not in self.dispatchers:
+            return self.func(first, *args, **kwargs)
+        return self.dispatchers[first](first, *args, **kwargs)
+
+    def register(self, first):
+        def decorator(func):
+            assert inspect.signature(func) == inspect.signature(self.func)
+            assert first not in self.dispatchers, f"'{first}' already has a registered parser"
+            self.dispatchers[first] = func
+            return func
+        return decorator
 
 
+@SingleDispatch
 def parse(typename, obj) -> str:
     """
     Parse the given object as the given type. A KeyError is raised if there is no
     parser registered for the given type.
     """
-    return PARSERS[typename](typename, obj)
+    raise RuntimeError(f"No parser registered for '{typename}'")
 
 
-def register(typename):
-    """
-    A decorator to be used to register a function as the parser for the specified type.
-    Functions that can be registered should have the signature (str, json_object).
-    """
-    def decorator(func):
-        assert typename not in PARSERS, f"'{typename}' already has a registered parser"
-        PARSERS[typename] = func
-        return func
-    return decorator
-
-
-@register("int")
+@parse.register("int")
 def _(typename, obj) -> str:
     assert isinstance(obj, int)
     return str(obj)
 
 
-@register("float")
+@parse.register("float")
 def _(typename, obj) -> str:
     assert isinstance(obj, (int, float))
     if "." not in str(obj):
@@ -42,7 +51,7 @@ def _(typename, obj) -> str:
     return f"{obj}f"
 
 
-@register("double")
+@parse.register("double")
 def _(typename, obj) -> str:
     assert isinstance(obj, (int, float))
     if "." not in str(obj):
@@ -50,13 +59,13 @@ def _(typename, obj) -> str:
     return f"{obj}"
 
 
-@register("bool")
+@parse.register("bool")
 def _(typename, obj) -> str:
     assert isinstance(obj, bool)
     return "true" if obj else "false"
 
 
-@register("std::string")
+@parse.register("std::string")
 def _(typename, obj) -> str:
     assert isinstance(obj, str)
     return f'"{obj}"'
