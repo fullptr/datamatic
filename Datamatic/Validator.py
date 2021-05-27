@@ -47,9 +47,7 @@ def validate_attribute(attr, flags):
     assert isinstance(attr["name"], str), attr
     assert isinstance(attr["display_name"], str), attr
 
-    cls = Types.get(attr["type"])
-    assert cls is not None
-    cls(attr["default"]) # Will assert if invalid
+    Types.parse(attr["type"], attr["default"])  # Will assert if invalid
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)
