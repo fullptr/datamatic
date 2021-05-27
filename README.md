@@ -138,6 +138,38 @@ The `__init__` receives the parsed json object in the `default` attribute of the
 
 Notice that it uses `Float`, which is the builtin implementation for floats, so type definitions can refer to other types. (This API is a bit clunky and will be revisited).
 
+### Flags
+You may have noticed in the spec file above that it contained a `flags` top level attribute. Flags provide a way to set boolean flags on components and attributes which can be used to ignore certain components/attributes in template blocks. For example, when saving a game, we may not want the health of entities to be saved (not a great example but it work to demonstrate the point). We can declare a flag called `SERIALISABLE` in the spec file in the following way
+```json
+{
+    "flags": [
+        {
+            "name": "SERIALISABLE",
+            "default": true
+        }
+    ],
+    "components": [
+        {
+            "name": "HealthComponent",
+            "display_name": "Health",
+            "flags": {
+                "SERIALISABLE": false
+            },
+            "attributes": [ ... ]
+        },
+        ...
+    ]
+}
+```
+If a flag is not specified for a component or attribute, the default value is used. Then the serialisation code template may look like
+```cpp
+#ifdef DATAMATIC_BLOCK SERIALISABLE=true
+    {{Comp.serialise.save_function}};
+    {{Comp.serialise.load_function}};
+#endif
+```
+Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
+
 ## Plugins
 As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic also exposes a `Plugin` base class which can be subclassed in the `.dmx.py` files too which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ function which print the component names in upper case. For this, you could create the following
 ```py
@@ -180,14 +212,59 @@ std::string TransformComponent_upper()
     return "TRANSFORMCOMPONENT";
 }
 ```
+### The `builtin` Plugin
+When writing something like `{{Comp.name}}`, this is not actually doing a simple attribute lookup from the spec. Instead this resolves to `{{Comp.builtin.name}}` and in fact calls a function called `name` in a provided plugin called `builtin`. This implementation is what you might expect:
+```py
+class builtin(Plugin):
+    @compattrmethod
+    def name(cls, obj):
+        return obj["name"]
+```
+Note this uses `@compattrmethod` because it can also be used to access the name of an attribute. This is done primarily for two reasons:
+* It makes "Attribute access" and "Plugin function" all uniform, which simplifies the implementation.
+* It allows datamatic to add more builtin functions in an entensible way.
 
-### Flags
+### Plugin Function Arguments
+It is also possible to pass arguments to plugin functions using a `|` pipe syntax. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp.if_not_last` function:
+```cpp
+using ECS = TemplatedECS<
+#ifdef DATAMATIC_BLOCK
+    {{Comp.name}}{{Comp.if_not_last|,}}
+#endif
+>;
+```
+The `Comp.if_not_last` takes one argument, and if the component is not the last component in the spec, the function resolves to the argument, otherwise it resolves to an empty string. The above example would produce:
+```cpp
+using ECS = TemplatedECS<
+    NameComponent,
+    HealthComponent,
+    TransformComponent
+>;
+```
+To access these arguments in the plugin, the function must have an `args` parameter:
+```py
+# in class builtin(Plugin):
+    @compmethod
+    def if_not_last(cls, comp, args: list[str]): ...
+```
+If the function call in the template code provides arguments but the function implementation does not have an `args` parameter, an error is raised. Conversely if a function implementation has an `args` parameter but the call in the template does not provide any, an error is raised. It is up to the function implementation to verify that the arguments passed make sense.
 
-This is currently heavily WIP, currently there are some hardcoded flags that can be specified when defining a block in a template: `SCRIPTABLE` and `SAVABLE`. These
-are flags that may be set on components and/or attributes, and when these flags are set, only components/attributes with those flags will get code generated for them.
-This is going to be generalised. Currently, extra flags can be defined by users but they can only be used within Plugins currently.
+### Plugin Spec Access
+For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp.if_not_last` must know the entire spec in order to know if the current component is the last. Plugins functions can request the spec by having a `spec` parameter. Thus `Comp.if_not_last` could be fully implemented as
+```py
+# in class builtin(Plugin):
+    @compmethod
+    def if_not_last(cls, comp, args, spec):
+        assert len(args) == 1
+        symbol = args[0]
+        if comp != spec["components"][-1]:
+            return symbol
+        return "" 
+```
 
 ## Future
-- Generalise the flags concept and remove hardcoded flags from the core library.
-- Look into other language support. Currently only C++ is properly supported. I have used this to generate Lua code as well, but most of that is done with a Plugin,
-  whereas I'd like Datamatic to be more language agnostic, considering the bulk of the language specific stuff lives in the template files themselves.
+* Have a nicer syntax for plugin function parameters as the pipe is a bit ugly. The current setup also cannot allow for passing a pipe symbol as a parameter.
+* Extend the builtin plugin to provide more useful functionality.
+* Support for more C++ standard types.
+* A nicer `Type` API.
+* Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic, but there are some C++ specific things. These things include the `#ifdef DATAMATIC_BLOCK` and the `Type` API. The reason I can use this for Lua is because you don't explicitly mention types so the `Type` API isn't a problem, and I don't make use of intellisense for Lua so the invalid syntax doesn't produce errors.
