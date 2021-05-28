@@ -4,7 +4,35 @@ C++ types. Users can subclass this to add their own types to
 Datamatic.
 """
 import functools
+from contextlib import suppress
 import parse as _parse
+
+
+def parse_variadic_typelist(string):
+    tokens = []
+    current = ""
+    stack = []
+    open_brackets = "(", "[", "<", "{"
+    close_brackets = ")", "]", ">", "}"
+    brackets = dict(zip(close_brackets, open_brackets))
+    for c in string:
+        if c in open_brackets:
+            stack.append(c)
+        elif c in close_brackets:
+            if len(stack) > 0 and stack[-1] == brackets[c]:
+                stack.pop()
+            else:
+                raise RuntimeError(f"Invalid type list '{string}'")
+        elif c == "," and stack == []:
+            tokens.append(current.strip())
+            current = ""
+            continue
+        current += c
+
+    tokens.append(current.strip()) # Append last type
+    if stack != []:
+        raise RuntimeError(f"Invalid type list '{string}'")
+    return tokens
 
 
 class SingleDispatch:
@@ -15,6 +43,7 @@ class SingleDispatch:
         self.func = func
         self.dispatchers = {}
         self.template_dispatchers = {}
+        self.variadic_dispatchers = {}
 
     def __call__(self, first, *args, **kwargs):
         if first in self.dispatchers:
@@ -26,11 +55,22 @@ class SingleDispatch:
                 types = list(result)
                 return value(first, *types, *args, **kwargs)
 
+        for key, value in self.variadic_dispatchers.items():
+            result = _parse.parse(key, first)
+            if result is not None:
+                types = parse_variadic_typelist(result[0])
+                return value(first, types, *args, **kwargs)
+
         return self.func(first, *args, **kwargs)
 
     def register(self, first, **kwargs):
         def decorator(func):
-            if "{}" in first:
+            if "{}..." in first:
+                assert first.count("{}") == 1, "Variadic and non-variadic mixing not supported"
+                newfirst = first.replace("{}...", "{}")
+                assert newfirst not in self.variadic_dispatchers, f"'{newfirst}' already has a registered parser"
+                self.variadic_dispatchers[newfirst] = functools.partial(func, **kwargs)
+            elif "{}" in first:
                 assert first not in self.template_dispatchers, f"'{first}' already has a registered parser"
                 self.template_dispatchers[first] = functools.partial(func, **kwargs)
             else:
@@ -111,8 +151,8 @@ def _(typename, subtype, size, obj) -> str:
 @parse.register("std::pair<{}, {}>")
 def _(typename, firsttype, secondtype, obj) -> str:
     assert isinstance(obj, list)
-    assert len(list) == 2
-    firstraw, secondraw = list
+    assert len(obj) == 2
+    firstraw, secondraw = obj
     first = parse(firsttype, firstraw)
     second = parse(secondtype, secondraw)
     return f"{typename}{{{first}, {second}}}"
@@ -154,3 +194,31 @@ def _(typename, subtype, obj) -> str:
 @parse.register("std::any")
 def _(typename, obj) -> str:
     return f"{typename}{{}}"
+
+
+@parse.register("std::tuple<{}...>")
+def _(typename, subtypes, obj) -> str:
+    assert isinstance(obj, list)
+    assert len(subtypes) == len(obj)
+    rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
+    return f"{typename}{{{rep}}}"
+
+
+@parse.register("std::monostate")
+def _(typename, obj) -> str:
+    assert obj is None
+    return f"{typename}{{}}"
+
+
+@parse.register("std::variant<{}...>")
+def _(typename, subtypes, obj) -> str:
+    for subtype in subtypes:
+        with suppress(Exception):
+            return parse(subtype, obj)
+    raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
+
+
+@parse.register("std::function<{}({})>")
+def _(typename, returntype, argtype, obj) -> str:
+    assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
+    return obj
