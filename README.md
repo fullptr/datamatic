@@ -85,7 +85,7 @@ Notice a few things
 * A block of template code uses C++'s `#ifdef` and `#endif` macros with `DATAMATIC_BLOCK` as the symbol. This symbol should not be defined; the only reason I use this rather than custom syntax is so that C++ syntax highlighting can still work on the template files without raising errors. Since the `DATAMATIC_BLOCK` symbol is not defined, the template code is ignored by the syntax highlighter (at least in VS Code).
 * Attributes are accessed via the double curly brace notation. Attributes are in one of two namespaces, `Comp` and `Attr`. The block is copied for each of the components in the spec, and everywhere the `Comp` namespace is used is substituted for the current component. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 
-Running Datamatic is very simple. It has no external dependencies so can just be cloned and ran on a repository as follows:
+Running datamatic is very simple:
 ```bash
 python Datamatic.py --spec <path/to/json/spec> --dir <path/to/project/root>
 ```
@@ -156,7 +156,7 @@ Datamatic exposes some hooks that allows you to enhance it with your own python 
 ## Types
 One important thing needed for an effective code generator is the ability to convert a representation of an object from one form into another. In datamatic, this conversion is mainly from python/json to C++, with the prime example being the `default` attribute in the spec file being a json object that needs to be represented in C++. Datamatic uses the function `Types.parse(typename: str, json_object) -> str` for carrying out these conversions.
 
-By default, the function is only defined when `typename` is either `"int"`, `"float"`, `"double"`, `"bool"` or `"std::string"`. Any other type results in a `RuntimeError`. However, this function can be extended by registering other types (notice in the above example the `TransformComponent` uses glm maths types). This is inspired by the `@functools.singledispatch` decorator in the standard library. Single dispatch is a form of polymorphism usually implemented based on the type of the first argument, however here we are dispatching based on the *value* of the first argument.
+By default, the function is defined when `typename` is either `"int"`, `"float"`, `"double"`, `"bool"`, `"std::string"`, `"std::any"`, or a standard container of any of these (see templated parsers below for a full list). Any other type results in a `RuntimeError`. However, this function can be extended by registering other types (notice in the above example the `TransformComponent` uses glm maths types). This is inspired by the `@functools.singledispatch` decorator in the standard library. Single dispatch is a form of polymorphism usually implemented based on the type of the first argument, however here we are dispatching based on the *value* of the first argument.
 
 `parse` can be extended by using the `parse.register` decoratore. These extensions are done via a `dmx` file.
 
@@ -188,7 +188,7 @@ def _(typename, obj) -> str:
     return f"{typename}{{{rep}}}"
 ```
 
-### Parametrising parser functions
+### Parametrised Parser Functions
 If you look at the above example, the implementation is the exact same as for `glm::vec3` except for the length check. It is also possible to have extra arguments to the parser to parametrise these. The values can then be passed in via the decorator. Thus it is possible to have all three of the above types use the same parser, along with `glm::vec2`:
 ```py
 from Datamatic.Types import parse
@@ -212,6 +212,60 @@ These extra parameters can also have default values which will be used if they a
 @parse.register("glm::quat")
 def _(typename, obj, length=4) -> str: ...
 ```
+
+### Templated Parser Functions
+Suppose we wanted to have vectors in our components. The only way we can currently write a parser for this would be something like
+```py
+@parse.register("std::vector<int>", subtype="int")
+def _(typename, obj, subtype) -> str: ...
+```
+and this would need to be manually extended for subtype we want. Ideally we would like to be able to define a parser for the generic type `std::vector<T>` and delegate to the parser for `T` to parse the subobjects. This can be achieved templated parsers. It uses [parse](https://pypi.org/project/parse/) under the hood, so templated types are represented with curly braces. The values extracted for the templated types bind to parameters in the parser between `typename` and `obj`, so an implementation for `std::vector<T>` looks like
+```py
+@parse.register("std::vector<{}>")
+def _(typename, subtype, obj) -> str:
+    assert isinstance(obj, list)
+    rep = ", ".join(parse(subtype, x) for x in obj)
+    return f"{typename}{{{rep}}}"
+```
+With this, you can now have vectors containing any of your own custom types! Most standard library containers are implmented by default. Datamatic currently supports the following:
+```
+std::vector<{}>
+std::deque<{}>
+std::queue<{}>
+std::stack<{}>
+std::list<{}>
+std::forward_list<{}>
+
+std::set<{}>
+std::unordered_set<{}>
+std::multiset<{}>
+std::unordered_multiset<{}>
+
+std::array<{}, {}>
+std::pair<{}, {}>
+
+std::map<{}, {}>
+std::unordered_map<{}, {}>
+std::multimap<{}, {}>
+std::unordered_multimap<{}, {}>
+
+std::optional<{}>
+std::unique_ptr<{}>
+std::shared_ptr<{}>
+std::weak_ptr<{}>
+```
+
+### Example of a Templated Parametrized Parser Functions
+Bringing it all together, the smart pointer parser are an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
+```py
+@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
+@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
+def _(typename, subtype, obj, make_fn) -> str:
+    if obj is not None:
+        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
+    return "nullptr"
+```
+
 
 ## Plugins
 As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic exposes a `Plugin` base class which can be subclassed in `dmx` files which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
