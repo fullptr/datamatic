@@ -227,8 +227,34 @@ def _(typename, subtype, obj) -> str:
     rep = ", ".join(parse(subtype, x) for x in obj)
     return f"{typename}{{{rep}}}"
 ```
-With this, you can now have vectors containing any of your own custom types! Most standard library containers are implmented by default. Datamatic currently supports the following:
+With this, it is now possible to have vectors of your own custom types by providing just a parser for the custom type!
+
+### Example of a Templated Parametrized Parser Functions
+Bringing it all together, the smart pointer parser are an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
+```py
+@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
+@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
+def _(typename, subtype, obj, make_fn) -> str:
+    if obj is not None:
+        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
+    return "nullptr"
 ```
+
+### Variadic Templatized Parser Functions
+Even with all of this, we still cannot represent `std::tuple<Ts...>`, `std::variant<Ts...>`, or any type with a variadic number of types. This can be done using a variadic template parser function, which looks something like this
+```py
+@parse.register("std::tuple<{}...>")
+def _(typename, subtypes, obj) -> str:  # Here, "subtypes" is a list of types
+    assert isinstance(obj, list)
+    assert len(subtypes) == len(obj)
+    rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
+    return f"{typename}{{{rep}}}"
+```
+It is not permitted to have a variadic template and a non-variadic template in the same parser, so something like `my_type<{}, {}...>` is not allowed. However, this can be implemented in the future. The way this works is by first removing the "..." from the string; that is only used to tell the parser to store this separately. After that, it then parses the captured string into the list of types. This is done character by character and counts the brackets ("(", "[", "<", "{"); only ending a current type if the brackets are balanced. This ensures that `"int, float, std::map<int, float>"` is parsed correctly and *not* parsed as `["int", "float", "std::map<int", "float>"]`.
+
+### Standard Library Support
+Most of the standard template library is implemented by default. Datamatic currently supports the following out of the box:
+```cpp
 std::vector<{}>
 std::deque<{}>
 std::queue<{}>
@@ -253,19 +279,15 @@ std::optional<{}>
 std::unique_ptr<{}>
 std::shared_ptr<{}>
 std::weak_ptr<{}>
-```
 
-### Example of a Templated Parametrized Parser Functions
-Bringing it all together, the smart pointer parser are an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
-```py
-@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
-@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
-def _(typename, subtype, obj, make_fn) -> str:
-    if obj is not None:
-        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
-    return "nullptr"
-```
+std::tuple<{}...>
+std::variant<{}...>
+std::monostate
 
+// No type checking done, default value is just a string that is substitued in unchecked
+// Due to no type checking, the signature can be anything, so variadic templates are not needed
+std::function<{}({})>
+```
 
 ## Plugins
 As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic exposes a `Plugin` base class which can be subclassed in `dmx` files which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:

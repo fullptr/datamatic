@@ -216,3 +216,9 @@ def _(typename, subtypes, obj) -> str:
         with suppress(Exception):
             return parse(subtype, obj)
     raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
+
+
+@parse.register("std::function<{}({})>")
+def _(typename, returntype, argtype, obj) -> str:
+    assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
+    return obj
