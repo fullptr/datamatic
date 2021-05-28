@@ -4,28 +4,43 @@ C++ types. Users can subclass this to add their own types to
 Datamatic.
 """
 import functools
+import parse as _parse
 
 
-class SingleDispatch:
+class Dispatcher:
     """
     A decorator class designed to implement single dispatch on the first argument of a function.
     """
     def __init__(self, func):
         self.func = func
         self.dispatchers = {}
+        self.template_dispatchers = {}
 
     def __call__(self, first, *args, **kwargs):
-        return self.dispatchers.get(first, self.func)(first, *args, **kwargs)
+        if first in self.dispatchers:
+            return self.dispatchers[first](first, *args, **kwargs)
+
+        for key, value in self.template_dispatchers.items():
+            result = _parse.parse(key, first)
+            if result is not None:
+                types = list(result)
+                return value(first, *types, *args, **kwargs)
+
+        return self.func(first, *args, **kwargs)
 
     def register(self, first, **kwargs):
         def decorator(func):
-            assert first not in self.dispatchers, f"'{first}' already has a registered parser"
-            self.dispatchers[first] = functools.partial(func, **kwargs)
+            if "{}" in first:
+                assert first not in self.template_dispatchers, f"'{first}' already has a registered parser"
+                self.template_dispatchers[first] = functools.partial(func, **kwargs)
+            else:
+                assert first not in self.dispatchers, f"'{first}' already has a registered parser"
+                self.dispatchers[first] = functools.partial(func, **kwargs)
             return func
         return decorator
 
 
-@SingleDispatch
+@Dispatcher
 def parse(typename, obj) -> str:
     """
     Parse the given object as the given type. A KeyError is raised if there is no
@@ -66,3 +81,29 @@ def _(typename, obj) -> str:
 def _(typename, obj) -> str:
     assert isinstance(obj, str)
     return f'"{obj}"'
+
+
+@parse.register("std::vector<{}>")
+@parse.register("std::deque<{}>")
+@parse.register("std::queue<{}>")
+@parse.register("std::stack<{}>")
+@parse.register("std::list<{}>")
+@parse.register("std::forward_list<{}>")
+@parse.register("std::set<{}>")
+@parse.register("std::unordered_set<{}>")
+@parse.register("std::multiset<{}>")
+@parse.register("std::unordered_multiset<{}>")
+def _(typename, subtype, obj) -> str:
+    assert isinstance(obj, list)
+    rep = ", ".join(parse(subtype, x) for x in obj)
+    return f"{typename}{{{rep}}}"
+
+
+@parse.register("std::map<{}, {}>")
+@parse.register("std::unordered_map<{}, {}>")
+@parse.register("std::multimap<{}>")
+@parse.register("std::unordered_multimap<{}>")
+def _(typename, keytype, valuetype, obj) -> str:
+    assert isinstance(obj, list)
+    rep = ", ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in obj)
+    return f"{typename}{{{rep}}}"
