@@ -7,7 +7,7 @@ import functools
 import parse as _parse
 
 
-class Dispatcher:
+class SingleDispatch:
     """
     A decorator class designed to implement single dispatch on the first argument of a function.
     """
@@ -40,7 +40,7 @@ class Dispatcher:
         return decorator
 
 
-@Dispatcher
+@SingleDispatch
 def parse(typename, obj) -> str:
     """
     Parse the given object as the given type. A KeyError is raised if there is no

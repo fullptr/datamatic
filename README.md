@@ -85,7 +85,7 @@ Notice a few things
 * A block of template code uses C++'s `#ifdef` and `#endif` macros with `DATAMATIC_BLOCK` as the symbol. This symbol should not be defined; the only reason I use this rather than custom syntax is so that C++ syntax highlighting can still work on the template files without raising errors. Since the `DATAMATIC_BLOCK` symbol is not defined, the template code is ignored by the syntax highlighter (at least in VS Code).
 * Attributes are accessed via the double curly brace notation. Attributes are in one of two namespaces, `Comp` and `Attr`. The block is copied for each of the components in the spec, and everywhere the `Comp` namespace is used is substituted for the current component. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 
-Running Datamatic is very simple. It has no external dependencies so can just be cloned and ran on a repository as follows:
+Running datamatic is very simple:
 ```bash
 python Datamatic.py --spec <path/to/json/spec> --dir <path/to/project/root>
 ```
