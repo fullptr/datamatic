@@ -99,11 +99,58 @@ def _(typename, subtype, obj) -> str:
     return f"{typename}{{{rep}}}"
 
 
+@parse.register("std::array<{}, {}>")
+def _(typename, subtype, size, obj) -> str:
+    assert size.isdigit(), f"Second parameter to std::array must be an integer, got '{size}'"
+    assert isinstance(obj, list), f"std::array expects a list of elements, got '{obj}'"
+    assert len(obj) == int(size), f"Incorrect number of elements for std::array, got {len(obj)}, expected {size}"
+    rep = ", ".join(parse(subtype, x) for x in obj)
+    return f"{typename}{{{rep}}}"
+
+
+@parse.register("std::pair<{}, {}>")
+def _(typename, firsttype, secondtype, obj) -> str:
+    assert isinstance(obj, list)
+    assert len(list) == 2
+    firstraw, secondraw = list
+    first = parse(firsttype, firstraw)
+    second = parse(secondtype, secondraw)
+    return f"{typename}{{{first}, {second}}}"
+
+
 @parse.register("std::map<{}, {}>")
 @parse.register("std::unordered_map<{}, {}>")
-@parse.register("std::multimap<{}>")
-@parse.register("std::unordered_multimap<{}>")
+@parse.register("std::multimap<{}, {}>")
+@parse.register("std::unordered_multimap<{}, {}>")
 def _(typename, keytype, valuetype, obj) -> str:
     assert isinstance(obj, list)
     rep = ", ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in obj)
     return f"{typename}{{{rep}}}"
+
+
+@parse.register("std::optional<{}>")
+def _(typename, subtype, obj) -> str:
+    if obj is not None:
+        rep = parse(subtype, obj)
+        return f"{typename}{{{rep}}}"
+    else:
+        return "std::nullopt"
+
+
+@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
+@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
+def _(typename, subtype, obj, make_fn) -> str:
+    if obj is not None:
+        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
+    return "nullptr"
+
+
+@parse.register("std::weak_ptr<{}>")
+def _(typename, subtype, obj) -> str:
+    assert obj is None
+    return "nullptr"
+
+
+@parse.register("std::any")
+def _(typename, obj) -> str:
+    return f"{typename}{{}}"
