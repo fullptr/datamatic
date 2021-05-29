@@ -6,7 +6,8 @@ import argparse
 import pathlib
 import sys
 import importlib.util
-from Datamatic import Validator, Generator
+
+import validator, generator
 
 
 def discover(directory):
@@ -66,10 +67,10 @@ def main(args):
 
     fill_flag_defaults(spec)
 
-    Validator.run(spec)
+    validator.run(spec)
 
     for file in args.dir.glob("**/*.dm.*"):
-        Generator.run(spec, file)
+        generator.run(spec, file)
 
     print("Done!")
 
