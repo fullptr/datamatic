@@ -1,6 +1,9 @@
 # Datamatic
 A python package for generating C++ and Lua source code.
 
+[![Build Status](https://travis-ci.com/MagicLemma/datamatic.svg?branch=main)](https://travis-ci.com/MagicLemma/datamatic)
+[![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/MagicLemma/datamatic/blob/main/LICENSE)
+
 ## Motivation
 As part of another project, I am using an [Entity Component System](https::github.com/MagicLemms/apecs). However, I kept finding areas where I needed to loop over all component types to implement logic, for example, exposing components to Lua, displaying them withing an ImGui editor window, and writing serialisation code. This made adding new components very cumbersome, as there would be several different areas of the code that would need updating.
 
