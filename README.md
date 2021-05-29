@@ -330,10 +330,10 @@ std::string TransformComponent_upper()
     return "TRANSFORMCOMPONENT";
 }
 ```
-### The `builtin` Plugin
+### The `Builtin` Plugin
 When writing something like `{{Comp.name}}`, this is not actually doing a simple attribute lookup from the spec. Instead this resolves to `{{Comp.builtin.name}}` and in fact calls a function called `name` in a provided plugin called `builtin`. This implementation is what you might expect:
 ```py
-class builtin(Plugin):
+class Builtin(Plugin):
     @compattrmethod
     def name(cls, obj):
         return obj["name"]
@@ -342,7 +342,7 @@ Note this uses `@compattrmethod` because it can also be used to access the name 
 * It makes "Attribute access" and "Plugin function" all uniform, which simplifies the implementation.
 * It allows datamatic to add more builtin functions in an entensible way.
 
-The `builtin` plugin also has some extra functionality and can be found [here](Datamatic/Plugins.py).
+The `Builtin` plugin also has some extra functionality and can be found [here](datamatic/builtin.py).
 
 ### Plugin Function Arguments
 It is also possible to pass arguments to plugin functions using a `|` pipe syntax. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp.if_not_last` function:
@@ -363,7 +363,7 @@ using ECS = TemplatedECS<
 ```
 To access these arguments in the plugin, the function must have an `args` parameter:
 ```py
-# in class builtin(Plugin):
+# in class Builtin(Plugin):
     @compmethod
     def if_not_last(cls, comp, args: list[str]): ...
 ```
@@ -372,7 +372,7 @@ If the function call in the template code provides arguments but the function im
 ### Plugin Spec Access
 For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp.if_not_last` must know the entire spec in order to know if the current component is the last. Plugins functions can request the spec by having a `spec` parameter. Thus `Comp.if_not_last` could be fully implemented as
 ```py
-# in class builtin(Plugin):
+# in class Builtin(Plugin):
     @compmethod
     def if_not_last(cls, comp, args, spec):
         assert len(args) == 1

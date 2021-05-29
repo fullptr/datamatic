@@ -2,7 +2,7 @@
 Validates a given schema to make sure it is well-formed. This should
 also serve as documentation for what makes a valid schema.
 """
-from .api import builtin
+from .builtin import Builtin
 
 
 COMP_KEYS_REQ = {
@@ -48,7 +48,7 @@ def validate_attribute(attr, flags):
     assert isinstance(attr["display_name"], str), attr
 
     # Verify that accessing the default value succeeds.
-    builtin.default(attr)
+    Builtin.default(attr)
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)

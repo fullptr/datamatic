@@ -35,7 +35,7 @@ def parse_token_string(raw_string: str) -> Token:
 
     namespace = tokens[0]
     if len(tokens) == 2:
-        plugin_name = "builtin"
+        plugin_name = "Builtin"
         function_name = tokens[1]
     elif len(tokens) == 3:
         plugin_name = tokens[1]
