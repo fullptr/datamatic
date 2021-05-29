@@ -4,7 +4,7 @@ from typing import Tuple, Literal
 from dataclasses import dataclass
 from functools import partial
 
-from plugins import Plugin
+from .api import Plugin
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
