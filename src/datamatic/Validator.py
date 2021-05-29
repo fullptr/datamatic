@@ -2,7 +2,7 @@
 Validates a given schema to make sure it is well-formed. This should
 also serve as documentation for what makes a valid schema.
 """
-from Datamatic import Plugins
+import Plugins
 
 
 COMP_KEYS_REQ = {

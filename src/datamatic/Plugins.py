@@ -3,7 +3,8 @@ A module that holds Plugin, a base class for plugins to Datamatic.
 Users can implement plugins that hook up to tokens in dm files for
 custom behaviour.
 """
-from Datamatic import Types
+
+import Types
 
 
 class Plugin:
