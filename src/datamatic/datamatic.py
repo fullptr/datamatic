@@ -1,2 +1,2 @@
-from Plugins import Plugin, compmethod, attrmethod
-from Types import parse
+from plugins import Plugin, compmethod, attrmethod
+from type_parse import parse

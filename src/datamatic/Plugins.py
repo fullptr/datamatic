@@ -4,7 +4,7 @@ Users can implement plugins that hook up to tokens in dm files for
 custom behaviour.
 """
 
-import Types
+import type_parse
 
 
 class Plugin:
@@ -65,7 +65,7 @@ class builtin(Plugin):
 
     @attrmethod
     def default(cls, attr):
-        return Types.parse(attr["type"], attr["default"])
+        return type_parse.parse(attr["type"], attr["default"])
 
 
     # Conditional helpers
