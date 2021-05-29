@@ -1,13 +1,13 @@
 """
-A tool for generating code based on a schema of components.
+Command line parser for datamatic.
 """
-import json
 import argparse
 import pathlib
+import json
 import sys
 import importlib.util
 
-import validator, generator
+from . import validator, generator
 
 
 def discover(directory):
@@ -73,8 +73,3 @@ def main(args):
         generator.run(spec, file)
 
     print("Done!")
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    main(args)

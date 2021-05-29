@@ -5,7 +5,15 @@ python:
   - "3.9"
   - "3.9-dev"
   - "nightly"
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+  - pip install codecov
 install:
   - pip install -r requirements.txt
+  - pip install ".[test]" .
 script:
   - pytest
+after_success:
+  - codecov

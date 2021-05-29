@@ -4,7 +4,8 @@ from typing import Tuple, Literal
 from dataclasses import dataclass
 from functools import partial
 
-from plugins import Plugin
+from .builtin import Builtin
+from .api import Plugin
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
@@ -35,7 +36,7 @@ def parse_token_string(raw_string: str) -> Token:
 
     namespace = tokens[0]
     if len(tokens) == 2:
-        plugin_name = "builtin"
+        plugin_name = Builtin.__name__
         function_name = tokens[1]
     elif len(tokens) == 3:
         plugin_name = tokens[1]

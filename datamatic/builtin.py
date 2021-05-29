@@ -1,53 +1,14 @@
 """
-A module that holds Plugin, a base class for plugins to Datamatic.
-Users can implement plugins that hook up to tokens in dm files for
-custom behaviour.
+The Builtin plugin which contains "attribute access" and some helpful functions.
 """
-
-import type_parse
-
-
-class Plugin:
-    @classmethod
-    def get(cls, name):
-        for c in cls.__subclasses__():
-            if c.__name__ == name:
-                return c
-        raise RuntimeError(f"Could not find plugin {name}")
-
-    @classmethod
-    def get_function(cls, namespace, plugin_name, function_name):
-        assert namespace in {"Comp", "Attr"}
-        function = getattr(Plugin.get(plugin_name), function_name)
-        assert hasattr(function, f"_{namespace}"), f"{function_name} is not in the namespace {namespace}"
-        return function
+from .api import Plugin, compmethod, attrmethod, compattrmethod, parse
 
 
-def compmethod(method):
-    method._Comp = None
-    return classmethod(method)
-
-
-def attrmethod(method):
-    method._Attr = None
-    return classmethod(method)
-
-
-def compattrmethod(method):
-    method._Comp = None
-    method._Attr = None
-    return classmethod(method)
-
-
-# BUITLIN PLUGINS
-
-
-class builtin(Plugin):
+class Builtin(Plugin):
     """
     The default plugin. When parsing a token to replace, if there are only two parameters,
     this is the assumed plugin. Contains simple accessors and some other helpers.
     """
-
 
     # Accessors
 
@@ -65,8 +26,7 @@ class builtin(Plugin):
 
     @attrmethod
     def default(cls, attr):
-        return type_parse.parse(attr["type"], attr["default"])
-
+        return parse(attr["type"], attr["default"])
 
     # Conditional helpers
 
