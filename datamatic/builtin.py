@@ -143,43 +143,43 @@ def main(context: api.Context):
         return obj
 
 
-    @context.compattrmethod("Builtin", "name")
+    @context.compattrmethod("name")
     def _(obj):
         return obj["name"]
 
-    @context.compattrmethod("Builtin", "display_name")
+    @context.compattrmethod("display_name")
     def _(obj):
         return obj["display_name"]
 
-    @context.attrmethod("Builtin", "type")
+    @context.attrmethod("type")
     def _(attr):
         return attr["type"]
 
-    @context.attrmethod("Builtin", "default")
+    @context.attrmethod("default")
     def _(attr):
         return context.types.parse(attr["type"], attr["default"])
 
-    @context.compmethod("Builtin", "if_nth_else")
+    @context.compmethod("if_nth_else")
     def if_nth_else(comp, args, spec):
         [n, yes_token, no_token] = args
         return yes_token if comp == spec["components"][int(n)] else no_token
 
-    @context.compmethod("Builtin", "if_first")
+    @context.compmethod("if_first")
     def _(comp, args, spec):
         [token] = args
         return if_nth_else(comp, ["0", token, ""], spec)
 
-    @context.compmethod("Builtin", "if_not_first")
+    @context.compmethod("if_not_first")
     def _(comp, args, spec):
         [token] = args
         return if_nth_else(comp, ["0", "", token], spec)
 
-    @context.compmethod("Builtin", "if_last")
+    @context.compmethod("if_last")
     def _(comp, args, spec):
         [token] = args
         return if_nth_else(comp, ["-1", token, ""], spec)
 
-    @context.compmethod("Builtin", "if_not_last")
+    @context.compmethod("if_not_last")
     def _(comp, args, spec):
         [token] = args
         return if_nth_else(comp, ["-1", "", token], spec)

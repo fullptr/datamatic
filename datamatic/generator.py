@@ -12,7 +12,6 @@ TOKEN = re.compile(r"\{\{(.*?)\}\}")
 class Token:
     raw_string: str
     namespace: Literal["Comp", "Attr"]
-    plugin_name: str
     function_name: str
     args: Tuple[str]
 
@@ -20,7 +19,7 @@ class Token:
 def parse_token_string(raw_string: str) -> Token:
     """
     Format:
-    ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]*
+    ("Comp"|"Attr") "." function_name ["|" function_arg]*
 
     Examples:
     "Comp.conditional.if_nth_else|2|,|."
@@ -33,18 +32,15 @@ def parse_token_string(raw_string: str) -> Token:
 
     namespace = tokens[0]
     if len(tokens) == 2:
-        plugin_name = "Builtin"
         function_name = tokens[1]
     elif len(tokens) == 3:
-        plugin_name = tokens[1]
-        function_name = tokens[2]
+        function_name = ".".join([tokens[1], tokens[2]])
     else:
         raise RuntimeError(f"Invalid token {raw_string}")
 
     return Token(
         raw_string=raw_string,
         namespace=namespace,
-        plugin_name=plugin_name,
         function_name=function_name,
         args=args
     )
@@ -66,7 +62,7 @@ def replace_token(matchobj, spec, obj, context):
                 expects args but there are none in the Token, an exception is raied.
     """
     token = parse_token_string(matchobj.group(1))
-    function = context.get(token.namespace, token.plugin_name, token.function_name)
+    function = context.get(token.namespace, token.function_name)
 
     sig = inspect.signature(function)
     assert len(sig.parameters) > 0, f"Invalid function signature for {token}"

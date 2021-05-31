@@ -87,33 +87,33 @@ class Context:
 
         self.types = TypeParser()
 
-    def compmethod(self, plugin, name):
+    def compmethod(self, function_name):
         def decorate(function):
-            self.compmethods["Comp", plugin, name] = function
+            self.compmethods["Comp", function_name] = function
             return function
         return decorate
 
-    def attrmethod(self, plugin, name):
+    def attrmethod(self, function_name):
         def decorate(function):
-            self.attrmethods["Attr", plugin, name] = function
+            self.attrmethods["Attr", function_name] = function
             return function
         return decorate
 
-    def compattrmethod(self, plugin, name):
+    def compattrmethod(self, function_name):
         def decorate(function):
-            self.compmethods["Comp", plugin, name] = function
-            self.attrmethods["Attr", plugin, name] = function
+            self.compmethods["Comp", function_name] = function
+            self.attrmethods["Attr", function_name] = function
             return function
         return decorate
 
-    def get(self, namespace, plugin, name):
-        if (namespace, plugin, name) in self.compmethods:
-            return self.compmethods[namespace, plugin, name]
+    def get(self, namespace, function_name):
+        if (namespace, function_name) in self.compmethods:
+            return self.compmethods[namespace, function_name]
 
-        if (namespace, plugin, name) in self.attrmethods:
-            return self.attrmethods[namespace, plugin, name]
+        if (namespace, function_name) in self.attrmethods:
+            return self.attrmethods[namespace, function_name]
 
-        if (namespace, plugin, name) in self.compattrmethods:
-            return self.compattrmethods[namespace, plugin, name]
+        if (namespace, function_name) in self.compattrmethods:
+            return self.compattrmethods[namespace, function_name]
 
-        raise RuntimeError(f"Could not find {namespace}.{plugin}.{name}")
+        raise RuntimeError(f"Could not find {namespace}.{function_name}")

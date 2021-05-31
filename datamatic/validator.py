@@ -46,7 +46,7 @@ def validate_attribute(attr, flags, context):
     assert isinstance(attr["display_name"], str), attr
 
     # Verify that accessing the default value succeeds.
-    context.get("Attr", "Builtin", "default")(attr)
+    context.get("Attr", "default")(attr)
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)
