@@ -15,8 +15,8 @@ def discover(directory, ctx: context.Context):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        sys.modules[spec.name] = module
-        sys.modules[spec.name].main(ctx)
+        #sys.modules[spec.name] = module
+        module.main(ctx)
 
 
 def fill_flag_defaults(spec):
