@@ -1,6 +1,7 @@
 from datamatic import generator
 from datamatic.generator import Token
 import pytest
+from pathlib import Path
 
 
 @pytest.mark.parametrize("raw,token", [
@@ -46,3 +47,19 @@ def test_flag_filtering():
     assert list(generator.flag_filter(objects, {"flag1": True, "flag2": False})) == [obj1]
     assert list(generator.flag_filter(objects, {"flag1": False, "flag2": True})) == []
     assert list(generator.flag_filter(objects, {"flag1": False, "flag2": False})) == [obj3]
+
+
+def test_parse_flag_value():
+    assert generator.parse_flag_val("true") == True
+    assert generator.parse_flag_val("false") == False
+
+    with pytest.raises(Exception):
+        generator.parse_flag_val("a")
+
+
+def test_get_header():
+    assert generator.get_header(Path("file.h")) == "// GENERATED FILE\n"
+    assert generator.get_header(Path("file.hpp")) == "// GENERATED FILE\n"
+    assert generator.get_header(Path("file.cpp")) == "// GENERATED FILE\n"
+    assert generator.get_header(Path("file.lua")) == "-- GENERATED FILE\n"
+
