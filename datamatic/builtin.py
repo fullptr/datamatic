@@ -1,7 +1,15 @@
 """
 The Builtin plugin which contains "attribute access" and some helpful functions.
 """
-from .api import Plugin, compmethod, attrmethod, compattrmethod, parse
+from .api import Plugin, compmethod, attrmethod, compattrmethod
+
+parse = None  # TODO: Remove this global
+
+def main(type_parser):
+    global parse
+    assert type_parser is not None
+    parse = type_parser
+    print("setting parser!")
 
 
 class Builtin(Plugin):

@@ -7,15 +7,16 @@ import json
 import sys
 import importlib.util
 
-from . import validator, generator
+from . import validator, generator, api, builtin
 
 
-def discover(directory):
+def discover(type_parser: api.TypeParser, directory):
     for file in directory.glob("**/*.dmx.py"):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
         spec.loader.exec_module(module)
+        sys.modules[spec.name] = module
+        sys.modules[spec.name].main(type_parser)
 
 
 def fill_flag_defaults(spec):
@@ -60,7 +61,11 @@ def main(args):
     """
     Entry point.
     """
-    discover(args.dir)
+    type_parser = api.TypeParser()
+    api.register_standard_types(type_parser)
+
+    discover(type_parser, args.dir)
+    builtin.main(type_parser)
 
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())

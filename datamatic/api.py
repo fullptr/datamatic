@@ -84,144 +84,142 @@ class TypeParser:
         return decorator
 
 
-parse = TypeParser()
+def register_standard_types(parse):
+    @parse.register("int")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, int)
+        return str(obj)
 
 
-@parse.register("int")
-def _(typename, obj) -> str:
-    assert isinstance(obj, int)
-    return str(obj)
+    @parse.register("float")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, (int, float))
+        if "." not in str(obj):
+            return f"{obj}.0f"
+        return f"{obj}f"
 
 
-@parse.register("float")
-def _(typename, obj) -> str:
-    assert isinstance(obj, (int, float))
-    if "." not in str(obj):
-        return f"{obj}.0f"
-    return f"{obj}f"
+    @parse.register("double")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, (int, float))
+        if "." not in str(obj):
+            return f"{obj}.0"
+        return f"{obj}"
 
 
-@parse.register("double")
-def _(typename, obj) -> str:
-    assert isinstance(obj, (int, float))
-    if "." not in str(obj):
-        return f"{obj}.0"
-    return f"{obj}"
+    @parse.register("bool")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, bool)
+        return "true" if obj else "false"
 
 
-@parse.register("bool")
-def _(typename, obj) -> str:
-    assert isinstance(obj, bool)
-    return "true" if obj else "false"
+    @parse.register("std::string")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, str)
+        return f'"{obj}"'
 
 
-@parse.register("std::string")
-def _(typename, obj) -> str:
-    assert isinstance(obj, str)
-    return f'"{obj}"'
-
-
-@parse.register("std::vector<{}>")
-@parse.register("std::deque<{}>")
-@parse.register("std::queue<{}>")
-@parse.register("std::stack<{}>")
-@parse.register("std::list<{}>")
-@parse.register("std::forward_list<{}>")
-@parse.register("std::set<{}>")
-@parse.register("std::unordered_set<{}>")
-@parse.register("std::multiset<{}>")
-@parse.register("std::unordered_multiset<{}>")
-def _(typename, subtype, obj) -> str:
-    assert isinstance(obj, list)
-    rep = ", ".join(parse(subtype, x) for x in obj)
-    return f"{typename}{{{rep}}}"
-
-
-@parse.register("std::array<{}, {}>")
-def _(typename, subtype, size, obj) -> str:
-    assert size.isdigit(), f"Second parameter to std::array must be an integer, got '{size}'"
-    assert isinstance(obj, list), f"std::array expects a list of elements, got '{obj}'"
-    assert len(obj) == int(size), f"Incorrect number of elements for std::array, got {len(obj)}, expected {size}"
-    rep = ", ".join(parse(subtype, x) for x in obj)
-    return f"{typename}{{{rep}}}"
-
-
-@parse.register("std::pair<{}, {}>")
-def _(typename, firsttype, secondtype, obj) -> str:
-    assert isinstance(obj, list)
-    assert len(obj) == 2
-    firstraw, secondraw = obj
-    first = parse(firsttype, firstraw)
-    second = parse(secondtype, secondraw)
-    return f"{typename}{{{first}, {second}}}"
-
-
-@parse.register("std::map<{}, {}>")
-@parse.register("std::unordered_map<{}, {}>")
-@parse.register("std::multimap<{}, {}>")
-@parse.register("std::unordered_multimap<{}, {}>")
-def _(typename, keytype, valuetype, obj) -> str:
-    if isinstance(obj, list):
-        pairs = obj
-    elif isinstance(obj, dict):
-        pairs = obj.items()
-    else:
-        raise RuntimeError(f"Could not parse {obj} as {typename}")
-
-    rep = ", ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in pairs)
-    return f"{typename}{{{rep}}}"
-
-
-@parse.register("std::optional<{}>")
-def _(typename, subtype, obj) -> str:
-    if obj is not None:
-        rep = parse(subtype, obj)
+    @parse.register("std::vector<{}>")
+    @parse.register("std::deque<{}>")
+    @parse.register("std::queue<{}>")
+    @parse.register("std::stack<{}>")
+    @parse.register("std::list<{}>")
+    @parse.register("std::forward_list<{}>")
+    @parse.register("std::set<{}>")
+    @parse.register("std::unordered_set<{}>")
+    @parse.register("std::multiset<{}>")
+    @parse.register("std::unordered_multiset<{}>")
+    def _(typename, subtype, obj) -> str:
+        assert isinstance(obj, list)
+        rep = ", ".join(parse(subtype, x) for x in obj)
         return f"{typename}{{{rep}}}"
-    else:
-        return "std::nullopt"
 
 
-@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
-@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
-def _(typename, subtype, obj, make_fn) -> str:
-    if obj is not None:
-        return f"{make_fn}<{subtype}>({parse(subtype, obj)})"
-    return "nullptr"
+    @parse.register("std::array<{}, {}>")
+    def _(typename, subtype, size, obj) -> str:
+        assert size.isdigit(), f"Second parameter to std::array must be an integer, got '{size}'"
+        assert isinstance(obj, list), f"std::array expects a list of elements, got '{obj}'"
+        assert len(obj) == int(size), f"Incorrect number of elements for std::array, got {len(obj)}, expected {size}"
+        rep = ", ".join(parse(subtype, x) for x in obj)
+        return f"{typename}{{{rep}}}"
 
 
-@parse.register("std::weak_ptr<{}>")
-def _(typename, subtype, obj) -> str:
-    assert obj is None
-    return "nullptr"
+    @parse.register("std::pair<{}, {}>")
+    def _(typename, firsttype, secondtype, obj) -> str:
+        assert isinstance(obj, list)
+        assert len(obj) == 2
+        firstraw, secondraw = obj
+        first = parse(firsttype, firstraw)
+        second = parse(secondtype, secondraw)
+        return f"{typename}{{{first}, {second}}}"
 
 
-@parse.register("std::any")
-@parse.register("std::monostate")
-def _(typename, obj) -> str:
-    assert obj is None
-    return f"{typename}{{}}"
+    @parse.register("std::map<{}, {}>")
+    @parse.register("std::unordered_map<{}, {}>")
+    @parse.register("std::multimap<{}, {}>")
+    @parse.register("std::unordered_multimap<{}, {}>")
+    def _(typename, keytype, valuetype, obj) -> str:
+        if isinstance(obj, list):
+            pairs = obj
+        elif isinstance(obj, dict):
+            pairs = obj.items()
+        else:
+            raise RuntimeError(f"Could not parse {obj} as {typename}")
+
+        rep = ", ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in pairs)
+        return f"{typename}{{{rep}}}"
 
 
-@parse.register("std::tuple<{}...>")
-def _(typename, subtypes, obj) -> str:
-    assert isinstance(obj, list)
-    assert len(subtypes) == len(obj)
-    rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
-    return f"{typename}{{{rep}}}"
+    @parse.register("std::optional<{}>")
+    def _(typename, subtype, obj) -> str:
+        if obj is not None:
+            rep = parse(subtype, obj)
+            return f"{typename}{{{rep}}}"
+        else:
+            return "std::nullopt"
 
 
-@parse.register("std::variant<{}...>")
-def _(typename, subtypes, obj) -> str:
-    for subtype in subtypes:
-        with suppress(Exception):
-            return parse(subtype, obj)
-    raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
+    @parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
+    @parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
+    def _(typename, subtype, obj, make_fn) -> str:
+        if obj is not None:
+            return f"{make_fn}<{subtype}>({parse(subtype, obj)})"
+        return "nullptr"
 
 
-@parse.register("std::function<{}({})>")
-def _(typename, returntype, argtype, obj) -> str:
-    assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
-    return obj
+    @parse.register("std::weak_ptr<{}>")
+    def _(typename, subtype, obj) -> str:
+        assert obj is None
+        return "nullptr"
+
+
+    @parse.register("std::any")
+    @parse.register("std::monostate")
+    def _(typename, obj) -> str:
+        assert obj is None
+        return f"{typename}{{}}"
+
+
+    @parse.register("std::tuple<{}...>")
+    def _(typename, subtypes, obj) -> str:
+        assert isinstance(obj, list)
+        assert len(subtypes) == len(obj)
+        rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
+        return f"{typename}{{{rep}}}"
+
+
+    @parse.register("std::variant<{}...>")
+    def _(typename, subtypes, obj) -> str:
+        for subtype in subtypes:
+            with suppress(Exception):
+                return parse(subtype, obj)
+        raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
+
+
+    @parse.register("std::function<{}({})>")
+    def _(typename, returntype, argtype, obj) -> str:
+        assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
+        return obj
 
 
 class Plugin:
