@@ -4,7 +4,6 @@ Command line parser for datamatic.
 import argparse
 import pathlib
 import json
-import sys
 import importlib.util
 
 from . import validator, generator, context, builtin
@@ -15,7 +14,6 @@ def discover(directory, ctx: context.Context):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        #sys.modules[spec.name] = module
         module.main(ctx)
 
 
