@@ -10,13 +10,13 @@ import importlib.util
 from . import validator, generator, api, builtin
 
 
-def discover(type_parser: api.TypeParser, plugin_list: api.PluginList, directory):
+def discover(directory, context: api.Context):
     for file in directory.glob("**/*.dmx.py"):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         sys.modules[spec.name] = module
-        sys.modules[spec.name].main(type_parser, plugin_list)
+        sys.modules[spec.name].main(context)
 
 
 def fill_flag_defaults(spec):
@@ -61,20 +61,19 @@ def main(args):
     """
     Entry point.
     """
-    type_parser = api.TypeParser()
-    plugin_list = api.PluginList()
+    context = api.Context()
 
-    builtin.main(type_parser, plugin_list)
-    discover(type_parser, plugin_list, args.dir)
+    builtin.main(context)
+    discover(args.dir, context)
 
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
 
     fill_flag_defaults(spec)
 
-    validator.run(spec, plugin_list)
+    validator.run(spec, context)
 
     for file in args.dir.glob("**/*.dm.*"):
-        generator.run(spec, file, type_parser, plugin_list)
+        generator.run(spec, file, context)
 
     print("Done!")

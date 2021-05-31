@@ -50,7 +50,7 @@ def parse_token_string(raw_string: str) -> Token:
     )
 
 
-def replace_token(matchobj, spec, obj, type_parser, plugin_list):
+def replace_token(matchobj, spec, obj, context):
     """
     Given a matchobj of the text that needs replacing, construct a token to find what
     function needs to be called to get the replacement string.
@@ -66,7 +66,7 @@ def replace_token(matchobj, spec, obj, type_parser, plugin_list):
                 expects args but there are none in the Token, an exception is raied.
     """
     token = parse_token_string(matchobj.group(1))
-    function = plugin_list.get(token.namespace, token.plugin_name, token.function_name)
+    function = context.get(token.namespace, token.plugin_name, token.function_name)
 
     sig = inspect.signature(function)
     assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
@@ -101,18 +101,18 @@ def get_comps(spec, flags):
             yield comp
 
 
-def process_block(spec, block, flags, type_parser, plugin_list):
+def process_block(spec, block, flags, context):
     out = ""
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp, type_parser=type_parser, plugin_list=plugin_list), line)
+                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp, context=context), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr, type_parser=type_parser, plugin_list=plugin_list), newline)
+                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr, context=context), newline)
 
                     out += newline + "\n"
             else:
@@ -143,7 +143,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src, type_parser, plugin_list):
+def run(spec, src, context):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:
@@ -158,7 +158,7 @@ def run(spec, src, type_parser, plugin_list):
 
         if in_block:
             if line == "#endif":
-                out += process_block(spec, block, flags, type_parser, plugin_list)
+                out += process_block(spec, block, flags, context)
                 in_block = False
                 block = []
                 flags = set()

@@ -35,7 +35,7 @@ FLAG_KEYS = {
 }
 
 
-def validate_attribute(attr, flags, plugin_list):
+def validate_attribute(attr, flags, context):
     """
     Asserts that the given attribute is well-formed.
     """
@@ -46,7 +46,7 @@ def validate_attribute(attr, flags, plugin_list):
     assert isinstance(attr["display_name"], str), attr
 
     # Verify that accessing the default value succeeds.
-    plugin_list.get("Attr", "Builtin", "default")(attr)
+    context.get("Attr", "Builtin", "default")(attr)
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)
@@ -87,7 +87,7 @@ def validate_component(comp, flags, plugin_list):
         validate_attribute(attr, flags, plugin_list)
 
 
-def run(spec, plugin_list):
+def run(spec, context):
     """
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
@@ -103,6 +103,6 @@ def run(spec, plugin_list):
     flags = {flag["name"] for flag in spec["flags"]}
 
     for comp in spec["components"]:
-        validate_component(comp, flags, plugin_list)
+        validate_component(comp, flags, context)
 
     print("Schema Valid!")
