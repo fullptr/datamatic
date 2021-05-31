@@ -76,23 +76,19 @@ class TypeParser:
 class Context:
     def __init__(self, spec):
         self.spec = spec
-        
-        self.compmethods = {}
-        self.attrmethods = {}
-
+        self.methods = {}
         self.types = TypeParser()
     
     def compmethod(self, function_name):
-        def decorate(function):
-            assert "Comp", function_name not in self.compmethods
-            self.compmethods["Comp", function_name] = function
-            return function
-        return decorate
+        return self.method("Comp", function_name)
 
     def attrmethod(self, function_name):
+        return self.method("Attr", function_name)
+
+    def method(self, namespace, function_name):
         def decorate(function):
-            assert "Attr", function_name not in self.attrmethods
-            self.attrmethods["Attr", function_name] = function
+            assert namespace, function_name not in self.methods
+            self.methods[namespace, function_name] = function
             return function
         return decorate
 
@@ -103,10 +99,6 @@ class Context:
         return self.types.parse(*args, **kwargs)
 
     def get(self, namespace, function_name):
-        if (namespace, function_name) in self.compmethods:
-            return self.compmethods[namespace, function_name]
-
-        if (namespace, function_name) in self.attrmethods:
-            return self.attrmethods[namespace, function_name]
-
+        if (namespace, function_name) in self.methods:
+            return self.methods[namespace, function_name]
         raise RuntimeError(f"Could not find {namespace}.{function_name}")

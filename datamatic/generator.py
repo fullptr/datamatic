@@ -54,27 +54,21 @@ def replace_token(matchobj, obj, context):
     return function(obj, *token.args)
 
 
-def get_attrs(comp, flags):
-    for attr in comp["attributes"]:
-        if all(attr['flags'][key] == value for key, value in flags.items()):
-            yield attr
-
-
-def get_comps(spec, flags):
-    for comp in spec["components"]:
-        if all(comp['flags'][key] == value for key, value in flags.items()):
-            yield comp
+def flag_filter(objects, flags):
+    for obj in objects:
+        if all(obj['flags'][key] == value for key, value in flags.items()):
+            yield obj
 
 
 def process_block(spec, block, flags, context):
     out = ""
-    for comp in get_comps(spec, flags):
+    for comp in flag_filter(spec["components"], flags):
         for line in block:
             while "{{Comp::" in line:
                 line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
 
             if "{{Attr::" in line:
-                for attr in get_attrs(comp, flags):
+                for attr in flag_filter(comp["attributes"], flags):
                     newline = line
                     while "{{Attr::" in newline:
                         newline = TOKEN.sub(partial(replace_token, obj=attr, context=context), newline)
