@@ -6,7 +6,7 @@ def ctx():
     """
     Returns a context with the builtin dmx loaded.
     """
-    ctx = context.Context()
+    ctx = context.Context({})
     builtin.main(ctx)
     return ctx
 
@@ -156,7 +156,7 @@ def test_parse_function(ctx):
 
 def test_typeparser_unregistered_type():
     # GIVEN
-    ctx = context.Context()
+    ctx = context.Context({})
 
     # THEN
     with pytest.raises(Exception):
@@ -165,7 +165,7 @@ def test_typeparser_unregistered_type():
 
 def test_typeparser_register():
     # GIVEN
-    ctx = context.Context()
+    ctx = context.Context({})
 
     # WHEN
     @ctx.types.register("foo")
@@ -178,7 +178,7 @@ def test_typeparser_register():
 
 def test_typeparser_template_register():
     # GIVEN
-    ctx = context.Context()
+    ctx = context.Context({})
 
     # WHEN
     @ctx.types.register("foo_{}")
@@ -191,7 +191,7 @@ def test_typeparser_template_register():
 
 def test_typeparser_variadic_register():
     # GIVEN
-    ctx = context.Context()
+    ctx = context.Context({})
 
     # WHEN
     @ctx.types.register("foo<{}...>")
