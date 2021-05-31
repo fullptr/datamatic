@@ -21,3 +21,10 @@ import pytest
 ])
 def test_parse_token_string_success(raw, token):
     assert token == generator.parse_token_string(raw)
+
+
+@pytest.mark.parametrize("raw", [
+
+])
+def test_parse_token_string_failure(raw):
+    pass

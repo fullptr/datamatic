@@ -216,3 +216,25 @@ def test_variadic_typelist_parser():
     
     with pytest.raises(Exception):
         context.parse_variadic_typelist("std::pair<")  # Invalid brackets
+
+
+def test_custom_function_lookup_success():
+    # GIVEN
+    ctx = context.Context({})
+
+    # WHEN
+    @ctx.attrmethod("test.func")
+    def func(attr):
+        return "Foo"
+
+    # THEN
+    assert ctx.get("Attr", "test.func") == func
+
+
+def test_custom_function_lookup_failure():
+    # GIVEN
+    ctx = context.Context({})
+
+    # THEN
+    with pytest.raises(Exception):
+        ctx.get("Attr", "test.func")
