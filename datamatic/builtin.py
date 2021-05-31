@@ -6,13 +6,13 @@ from . import context
 
 def main(ctx: context.Context):
 
-    @ctx.types.register("int")
+    @ctx.type("int")
     def _(typename, obj) -> str:
         assert isinstance(obj, int)
         return str(obj)
 
 
-    @ctx.types.register("float")
+    @ctx.type("float")
     def _(typename, obj) -> str:
         assert isinstance(obj, (int, float))
         if "." not in str(obj):
@@ -20,7 +20,7 @@ def main(ctx: context.Context):
         return f"{obj}f"
 
 
-    @ctx.types.register("double")
+    @ctx.type("double")
     def _(typename, obj) -> str:
         assert isinstance(obj, (int, float))
         if "." not in str(obj):
@@ -28,35 +28,35 @@ def main(ctx: context.Context):
         return f"{obj}"
 
 
-    @ctx.types.register("bool")
+    @ctx.type("bool")
     def _(typename, obj) -> str:
         assert isinstance(obj, bool)
         return "true" if obj else "false"
 
 
-    @ctx.types.register("std::string")
+    @ctx.type("std::string")
     def _(typename, obj) -> str:
         assert isinstance(obj, str)
         return f'"{obj}"'
 
 
-    @ctx.types.register("std::vector<{}>")
-    @ctx.types.register("std::deque<{}>")
-    @ctx.types.register("std::queue<{}>")
-    @ctx.types.register("std::stack<{}>")
-    @ctx.types.register("std::list<{}>")
-    @ctx.types.register("std::forward_list<{}>")
-    @ctx.types.register("std::set<{}>")
-    @ctx.types.register("std::unordered_set<{}>")
-    @ctx.types.register("std::multiset<{}>")
-    @ctx.types.register("std::unordered_multiset<{}>")
+    @ctx.type("std::vector<{}>")
+    @ctx.type("std::deque<{}>")
+    @ctx.type("std::queue<{}>")
+    @ctx.type("std::stack<{}>")
+    @ctx.type("std::list<{}>")
+    @ctx.type("std::forward_list<{}>")
+    @ctx.type("std::set<{}>")
+    @ctx.type("std::unordered_set<{}>")
+    @ctx.type("std::multiset<{}>")
+    @ctx.type("std::unordered_multiset<{}>")
     def _(typename, subtype, obj) -> str:
         assert isinstance(obj, list)
         rep = ", ".join(ctx.types.parse(subtype, x) for x in obj)
         return f"{typename}{{{rep}}}"
 
 
-    @ctx.types.register("std::array<{}, {}>")
+    @ctx.type("std::array<{}, {}>")
     def _(typename, subtype, size, obj) -> str:
         assert size.isdigit(), f"Second parameter to std::array must be an integer, got '{size}'"
         assert isinstance(obj, list), f"std::array expects a list of elements, got '{obj}'"
@@ -65,7 +65,7 @@ def main(ctx: context.Context):
         return f"{typename}{{{rep}}}"
 
 
-    @ctx.types.register("std::pair<{}, {}>")
+    @ctx.type("std::pair<{}, {}>")
     def _(typename, firsttype, secondtype, obj) -> str:
         assert isinstance(obj, list)
         assert len(obj) == 2
@@ -75,10 +75,10 @@ def main(ctx: context.Context):
         return f"{typename}{{{first}, {second}}}"
 
 
-    @ctx.types.register("std::map<{}, {}>")
-    @ctx.types.register("std::unordered_map<{}, {}>")
-    @ctx.types.register("std::multimap<{}, {}>")
-    @ctx.types.register("std::unordered_multimap<{}, {}>")
+    @ctx.type("std::map<{}, {}>")
+    @ctx.type("std::unordered_map<{}, {}>")
+    @ctx.type("std::multimap<{}, {}>")
+    @ctx.type("std::unordered_multimap<{}, {}>")
     def _(typename, keytype, valuetype, obj) -> str:
         if isinstance(obj, list):
             pairs = obj
@@ -91,7 +91,7 @@ def main(ctx: context.Context):
         return f"{typename}{{{rep}}}"
 
 
-    @ctx.types.register("std::optional<{}>")
+    @ctx.type("std::optional<{}>")
     def _(typename, subtype, obj) -> str:
         if obj is not None:
             rep = ctx.types.parse(subtype, obj)
@@ -100,28 +100,28 @@ def main(ctx: context.Context):
             return "std::nullopt"
 
 
-    @ctx.types.register("std::unique_ptr<{}>", make_fn="std::make_unique")
-    @ctx.types.register("std::shared_ptr<{}>", make_fn="std::make_shared")
+    @ctx.type("std::unique_ptr<{}>", make_fn="std::make_unique")
+    @ctx.type("std::shared_ptr<{}>", make_fn="std::make_shared")
     def _(typename, subtype, obj, make_fn) -> str:
         if obj is not None:
             return f"{make_fn}<{subtype}>({ctx.types.parse(subtype, obj)})"
         return "nullptr"
 
 
-    @ctx.types.register("std::weak_ptr<{}>")
+    @ctx.type("std::weak_ptr<{}>")
     def _(typename, subtype, obj) -> str:
         assert obj is None
         return "nullptr"
 
 
-    @ctx.types.register("std::any")
-    @ctx.types.register("std::monostate")
+    @ctx.type("std::any")
+    @ctx.type("std::monostate")
     def _(typename, obj) -> str:
         assert obj is None
         return f"{typename}{{}}"
 
 
-    @ctx.types.register("std::tuple<{}...>")
+    @ctx.type("std::tuple<{}...>")
     def _(typename, subtypes, obj) -> str:
         assert isinstance(obj, list)
         assert len(subtypes) == len(obj)
@@ -129,7 +129,7 @@ def main(ctx: context.Context):
         return f"{typename}{{{rep}}}"
 
 
-    @ctx.types.register("std::variant<{}...>")
+    @ctx.type("std::variant<{}...>")
     def _(typename, subtypes, obj) -> str:
         for subtype in subtypes:
             with suppress(Exception):
@@ -137,7 +137,7 @@ def main(ctx: context.Context):
         raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
 
 
-    @ctx.types.register("std::function<{}({})>")
+    @ctx.type("std::function<{}({})>")
     def _(typename, returntype, argtype, obj) -> str:
         assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
         return obj

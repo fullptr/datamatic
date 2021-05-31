@@ -62,14 +62,12 @@ class TypeParser:
             return self.dispatchers[first](first, *args, **kwargs)
 
         for key, value in self.template_dispatchers.items():
-            result = parse.parse(key, first)
-            if result is not None:
+            if result := parse.parse(key, first):
                 types = list(result)
                 return value(first, *types, *args, **kwargs)
 
         for key, value in self.variadic_dispatchers.items():
-            result = parse.parse(key, first)
-            if result is not None:
+            if result := parse.parse(key, first):
                 types = parse_variadic_typelist(result[0])
                 return value(first, types, *args, **kwargs)
 
@@ -95,6 +93,9 @@ class Context:
             self.attrmethods["Attr", function_name] = function
             return function
         return decorate
+
+    def type(self, *args, **kwargs):
+        return self.types.register(*args, **kwargs)
 
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.compmethods:
