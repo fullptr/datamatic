@@ -5,10 +5,7 @@ custom behaviour.
 """
 import functools
 from contextlib import suppress
-import parse as _parse
-
-
-__all__ = ["Plugin", "compmethod", "attrmethod", "compattrmethod", "parse"]
+import parse
 
 
 def parse_variadic_typelist(string):
@@ -66,13 +63,13 @@ class TypeParser:
             return self.dispatchers[first](first, *args, **kwargs)
 
         for key, value in self.template_dispatchers.items():
-            result = _parse.parse(key, first)
+            result = parse.parse(key, first)
             if result is not None:
                 types = list(result)
                 return value(first, *types, *args, **kwargs)
 
         for key, value in self.variadic_dispatchers.items():
-            result = _parse.parse(key, first)
+            result = parse.parse(key, first)
             if result is not None:
                 types = parse_variadic_typelist(result[0])
                 return value(first, types, *args, **kwargs)
@@ -86,23 +83,25 @@ class Context:
         self.compattrmethods = {}
 
         self.types = TypeParser()
-
+    
     def compmethod(self, function_name):
         def decorate(function):
+            assert "Comp", function_name not in self.compmethods
             self.compmethods["Comp", function_name] = function
             return function
         return decorate
 
     def attrmethod(self, function_name):
         def decorate(function):
+            assert "Attr", function_name not in self.attrmethods
             self.attrmethods["Attr", function_name] = function
             return function
         return decorate
 
     def compattrmethod(self, function_name):
         def decorate(function):
-            self.compmethods["Comp", function_name] = function
-            self.attrmethods["Attr", function_name] = function
+            self.compmethod(function_name)(function)
+            self.attrmethod(function_name)(function)
             return function
         return decorate
 
