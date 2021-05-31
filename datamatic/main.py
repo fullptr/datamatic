@@ -4,18 +4,17 @@ Command line parser for datamatic.
 import argparse
 import pathlib
 import json
-import sys
 import importlib.util
 
-from . import validator, generator
+from . import validator, generator, context, builtin
 
 
-def discover(directory):
+def discover(directory, ctx: context.Context):
     for file in directory.glob("**/*.dmx.py"):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
         spec.loader.exec_module(module)
+        module.main(ctx)
 
 
 def fill_flag_defaults(spec):
@@ -60,16 +59,17 @@ def main(args):
     """
     Entry point.
     """
-    discover(args.dir)
-
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
+        fill_flag_defaults(spec)
 
-    fill_flag_defaults(spec)
+    ctx = context.Context(spec)
+    builtin.main(ctx)
+    discover(args.dir, ctx)
 
-    validator.run(spec)
+    validator.run(spec, ctx)
 
     for file in args.dir.glob("**/*.dm.*"):
-        generator.run(spec, file)
+        generator.run(spec, file, ctx)
 
     print("Done!")

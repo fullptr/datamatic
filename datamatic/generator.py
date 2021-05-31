@@ -1,11 +1,8 @@
 import re
-import inspect
-from typing import Tuple, Literal
-from dataclasses import dataclass
+from typing import Tuple, Literal, Optional
+from dataclasses import dataclass, field
 from functools import partial
-
-from .builtin import Builtin
-from .api import Plugin
+import parse
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
@@ -13,83 +10,48 @@ TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
 @dataclass(frozen=True)
 class Token:
-    raw_string: str
     namespace: Literal["Comp", "Attr"]
-    plugin_name: str
     function_name: str
     args: Tuple[str]
+    raw_string: Optional[str] = field(default=None, compare=False)
 
 
 def parse_token_string(raw_string: str) -> Token:
     """
     Format:
-    ("Comp"|"Attr") "." [plugin_name "."] function_name ["|" function_arg]*
+    ("Comp"|"Attr") "::" function_name ["(" <args> ")"]
 
     Examples:
-    "Comp.conditional.if_nth_else|2|,|."
-    "Comp.name"
+    "Comp::conditional.if_nth_else(2|,|.)"
+    "Comp::name"
     """
-    *tokens, last_token = raw_string.split(".")
-    last_token, *args = last_token.split("|")
-    tokens = *tokens, last_token
-    args = tuple(args)
-
-    namespace = tokens[0]
-    if len(tokens) == 2:
-        plugin_name = Builtin.__name__
-        function_name = tokens[1]
-    elif len(tokens) == 3:
-        plugin_name = tokens[1]
-        function_name = tokens[2]
-    else:
-        raise RuntimeError(f"Invalid token {raw_string}")
+    try:
+        namespace, rest = raw_string.split("::")
+        if result := parse.parse("{}({})", rest):
+            function_name = result[0]
+            args = tuple(arg.strip() for arg in result[1].split("|"))
+        else:
+            function_name = rest
+            args = tuple()
+    except ValueError as e:
+        raise RuntimeError(f"Error: {e}, {raw_string=}") from e
 
     return Token(
-        raw_string=raw_string,
         namespace=namespace,
-        plugin_name=plugin_name,
         function_name=function_name,
-        args=args
+        args=args,
+        raw_string=raw_string,
     )
 
 
-def replace_token(matchobj, spec, obj):
+def replace_token(matchobj, obj, context):
     """
-    Given a matchobj of the text that needs replacing, construct a token to find what
-    function needs to be called to get the replacement string.
-    
-    After finding the function, inspect its signature. It must have at least one parameter
-    and that is always bound to the object (component or attribute) currently in use.
-    
-    After the first parameter, the following other parameter names are allowed:
-        - spec: If specified, the entire component spec is bound to this parameter
-        - args: If specified, the arguments found in the Token are bound to this parameter.
-                Additionally, if there are arguments in the token but the function does not
-                have this parameter, an exception is raised. Conversely, if the function
-                expects args but there are none in the Token, an exception is raied.
+    Parse the replacement token in the matchobj to figure out the namespace, function name
+    and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
     token = parse_token_string(matchobj.group(1))
-    function = Plugin.get_function(token.namespace, token.plugin_name, token.function_name)
-
-    sig = inspect.signature(function)
-    assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
-    
-    _, *parameter_names = list(sig.parameters.keys())
-    unknowns = set(parameter_names) - {"args", "spec"}
-    assert not unknowns, f"Unknown parameters: {unknowns}"
-    
-    params = {}
-
-    if "spec" in parameter_names:
-        params["spec"] = spec
-
-    if "args" in parameter_names:
-        assert len(token.args) > 0
-        params["args"] = token.args
-    else:
-        assert len(token.args) == 0
-
-    return function(obj, **params)
+    function = context.get(token.namespace, token.function_name)
+    return function(obj, *token.args)
 
 
 def get_attrs(comp, flags):
@@ -104,18 +66,18 @@ def get_comps(spec, flags):
             yield comp
 
 
-def process_block(spec, block, flags):
+def process_block(spec, block, flags, context):
     out = ""
     for comp in get_comps(spec, flags):
         for line in block:
-            while "{{Comp." in line:
-                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp), line)
+            while "{{Comp::" in line:
+                line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
 
-            if "{{Attr." in line:
+            if "{{Attr::" in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
-                    while "{{Attr." in newline:
-                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr), newline)
+                    while "{{Attr::" in newline:
+                        newline = TOKEN.sub(partial(replace_token, obj=attr, context=context), newline)
 
                     out += newline + "\n"
             else:
@@ -146,7 +108,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src):
+def run(spec, src, context):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:
@@ -161,7 +123,7 @@ def run(spec, src):
 
         if in_block:
             if line == "#endif":
-                out += process_block(spec, block, flags)
+                out += process_block(spec, block, flags, context)
                 in_block = False
                 block = []
                 flags = set()

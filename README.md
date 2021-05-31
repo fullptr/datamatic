@@ -77,16 +77,20 @@ For a full description of what a valid schema is, see [Validator.py](Datamatic/V
 #include <glm/glm.hpp>
 
 #ifdef DATAMATIC_BLOCK
-struct {{Comp.name}}
+struct {{Comp::name}}
 {
-    {{Attr.type}} {{Attr.name}} = {{Attr.default}};
+    {{Attr::type}} {{Attr::name}} = {{Attr::default}};
 };
 
 #endif
 ```
 Notice a few things
 * A block of template code uses C++'s `#ifdef` and `#endif` macros with `DATAMATIC_BLOCK` as the symbol. This symbol should not be defined; the only reason I use this rather than custom syntax is so that C++ syntax highlighting can still work on the template files without raising errors. Since the `DATAMATIC_BLOCK` symbol is not defined, the template code is ignored by the syntax highlighter (at least in VS Code).
-* Attributes are accessed via the double curly brace notation. Attributes are in one of two namespaces, `Comp` and `Attr`. The block is copied for each of the components in the spec, and everywhere the `Comp` namespace is used is substituted for the current component. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
+* Replacement tokens are of the form `{{Namespace::function_name(args)}}`. If a function takes no arguments, the parentheses may be omitted. All of these functions return strings to insert into the output file.
+* The block is copied for each of the components in the spec, and functions in the `Comp` namespace are called with the current component implicitly passed in. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
+* The only valid namespaces are `Comp` and `Attr`.
+* `name`, `display_name` and `default` are examples of builtin functions.
+* `name` and `display_name` simply return the value found in the component spec. `default` is a bit more complex as it needs to parse the json object in the spec into a string of C++ code. More on this later.
 
 Running datamatic is very simple:
 ```bash
@@ -143,115 +147,115 @@ You may have noticed in the spec file above that it contained a `flags` top leve
 If a flag is not specified for a component or attribute, the default value is used. Then the serialisation code template may look like
 ```cpp
 #ifdef DATAMATIC_BLOCK SERIALISABLE=true
-    {{Comp.serialise.save_function}};
-    {{Comp.serialise.load_function}};
+    // Serialisation code here
 #endif
 ```
 Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
 
 ## Custom Extensions
-By default, datamatic's runtime is quite basic, and you will most likely find yourself needing to extend it with code that is meaningful only for your codebase. For instance
+By default, datamatic's runtime is quite basic, and you will most likely find yourself needing to extend it with code that is meaningful for your codebase. For instance
 * You may want your own custom types to be data members of your components
 * You may require more complex code to be generated that cannot be expressed in datamatic's simplistic syntax
 
-Datamatic exposes some hooks that allows you to enhance it with your own python code. Simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. The hooks that you have access to here are described below.
+Most of the "business logic" is stored in a `Context` object, which is made available to users. Simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. These files should contain a `main` function that accepts one argument; this will be called with the context passed as that argument. The features of this object are described more below.
 
 ## Types
-One important thing needed for an effective code generator is the ability to convert a representation of an object from one form into another. In datamatic, this conversion is mainly from python/json to C++, with the prime example being the `default` attribute in the spec file being a json object that needs to be represented in C++. Datamatic uses the function `Types.parse(typename: str, json_object) -> str` for carrying out these conversions.
+The default values in the component spec are stored as json objects themselves rather than as a simple string of C++ code. This is done so that datamatic can provide a level of type checking for the values. Datamatic has type checkers for most standard library types and primitive types. If you were to, say, try to have `null` or `5` be the default value for a `std::string`, datamatic would raise an exception. This makes datamatic code less error-prone, but has the tradeoff that it doesn't know how to handle custom types. To fix this, the `Context` object provides a method for registering your own custom types. This lets you define a parser function to convert a JSON representation of your type into a string of C++ code.
 
-By default, the function is defined when `typename` is either `"int"`, `"float"`, `"double"`, `"bool"`, `"std::string"`, `"std::any"`, or a standard container of any of these (see templated parsers below for a full list). Any other type results in a `RuntimeError`. However, this function can be extended by registering other types (notice in the above example the `TransformComponent` uses glm maths types). This is inspired by the `@functools.singledispatch` decorator in the standard library. Single dispatch is a form of polymorphism usually implemented based on the type of the first argument, however here we are dispatching based on the *value* of the first argument.
+Datamatic uses the function `ctx.parse(typename: str, json_object) -> str` for carrying out these conversions, and can be enhanced with the `ctx.types` decorator.
 
-`parse` can be extended by using the `parse.register` decoratore. These extensions are done via a `dmx` file.
-
-An example of a `dmx` file that extends `Types.parse` for `glm::vec3`:
+An example of a `dmx` file that extends `ctx.parse` for `glm::vec3`:
 ```py
-from datamatic.api import parse
+def main(ctx):
 
-@parse.register("glm::vec3")
-def _(typename, obj) -> str:
-    # For this implementation, typename == "glm::vec3"
-    assert isinstance(obj, list)
-    assert len(obj) == 3
-    rep = ", ".join(parse("float", val) for val in obj)
-    return f"{typename}{{{rep}}}"
+    @ctx.type("glm::vec3")
+    def _(typename, obj) -> str:
+        # For this implementation, typename == "glm::vec3"
+        assert isinstance(obj, list)
+        assert len(obj) == 3
+        rep = ", ".join(ctx.parse("float", val) for val in obj)
+        return f"{typename}{{{rep}}}"
 ```
-With this in your codebase, `Types.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type.
+With this in your codebase, `ctx.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type. Also note that this function delegates to the `float` parser for the vector elements.
 
 ### Registering the same parser for different types
 Consider the implementations of `glm::vec4` and `glm::quat`. They are both essentially a vector of four elements, so they can both use the same parser:
 ```py
-from datamatic.api import parse
+def main(ctx):
 
-@parse.register("glm::vec4")
-@parse.register("glm::quat")
-def _(typename, obj) -> str:
-    assert isinstance(obj, list)
-    assert len(obj) == 4
-    rep = ", ".join(parse("float", val) for val in obj)
-    return f"{typename}{{{rep}}}"
+    @ctx.type("glm::vec4")
+    @ctx.type("glm::quat")
+    def _(typename, obj) -> str:
+        assert isinstance(obj, list)
+        assert len(obj) == 4
+        rep = ", ".join(ctx.parse("float", val) for val in obj)
+        return f"{typename}{{{rep}}}"
 ```
 
 ### Parametrised Parser Functions
 If you look at the above example, the implementation is the exact same as for `glm::vec3` except for the length check. It is also possible to have extra arguments to the parser to parametrise these. The values can then be passed in via the decorator. Thus it is possible to have all three of the above types use the same parser, along with `glm::vec2`:
 ```py
-from datamatic.api import parse
+def main(ctx):
 
-@parse.register("glm::vec2", length=2)
-@parse.register("glm::vec3", length=3)
-@parse.register("glm::vec4", length=4)
-@parse.register("glm::quat", length=4)
-def _(typename, obj, length) -> str:
-    assert isinstance(obj, list)
-    assert len(obj) == length
-    rep = ", ".join(parse("float", val) for val in obj)
-    return f"{typename}{{{rep}}}"
+    @ctx.type("glm::vec2", length=2)
+    @ctx.type("glm::vec3", length=3)
+    @ctx.type("glm::vec4", length=4)
+    @ctx.type("glm::quat", length=4)
+    def _(typename, obj, length) -> str:
+        assert isinstance(obj, list)
+        assert len(obj) == length
+        rep = ", ".join(ctx.parse("float", val) for val in obj)
+        return f"{`typename}{{{rep}}}"
 ```
 
 These extra parameters can also have default values which will be used if they are not specified in the decorator:
 ```py
-@parse.register("glm::vec2", length=2)
-@parse.register("glm::vec3", length=3)
-@parse.register("glm::vec4")
-@parse.register("glm::quat")
-def _(typename, obj, length=4) -> str: ...
+    @ctx.type("glm::vec2", length=2)
+    @ctx.type("glm::vec3", length=3)
+    @ctx.type("glm::vec4")
+    @ctx.type("glm::quat")
+    def _(typename, obj, length=4) -> str: ...
 ```
 
 ### Templated Parser Functions
-Suppose we wanted to have vectors in our components. The only way we can currently write a parser for this would be something like
+So far we have just seen concrete type implementations. Datamatic also supports templated types. For example, the implementation of `std::vector<T>` is
 ```py
-@parse.register("std::vector<int>", subtype="int")
-def _(typename, obj, subtype) -> str: ...
+    @ctx.type("std::vector<{}>")
+    def _(typename, subtype, obj) -> str:
+        assert isinstance(obj, list)
+        rep = ", ".join(ctx.parse(subtype, x) for x in obj)
+        return f"{typename}{{{rep}}}"
 ```
-and this would need to be manually extended for subtype we want. Ideally we would like to be able to define a parser for the generic type `std::vector<T>` and delegate to the parser for `T` to parse the subobjects. This can be achieved templated parsers. It uses [parse](https://pypi.org/project/parse/) under the hood, so templated types are represented with curly braces. The values extracted for the templated types bind to parameters in the parser between `typename` and `obj`, so an implementation for `std::vector<T>` looks like
-```py
-@parse.register("std::vector<{}>")
-def _(typename, subtype, obj) -> str:
-    assert isinstance(obj, list)
-    rep = ", ".join(parse(subtype, x) for x in obj)
-    return f"{typename}{{{rep}}}"
-```
-With this, it is now possible to have vectors of your own custom types by providing just a parser for the custom type!
+This will match any type of the form `std::vector<{}>`, verifies the JSON object is a list, then verifies all of the subelements can be parsed as the matched subtype. Thus if you want a component to contain a vector of your custom type, you just need to provide the parser for the custom type.
+
+You may have noticed that the signature of this parser is different. When a templated type is used, the subtypes that match with the brackets are passed into the parser as args in between `typename` and `obj`. If there were two sets of brackets, for example `std::map<{}, {}>`, then the parser function signature should be `(typename, keytype, valuetype, obj)`.
+
+When calling `ctx.parse("std::vector<int>", [1, 2, 3])`, the following happens
+* A concrete definition for `std::vector<int>` is looked up, which fails.
+* The parser then loops through the templated functions until it finds one that matches. This uses [parse](https://pypi.org/project/parse/) under the hood.
+* It matches `std::vector<int>` with `std::vector<{}>` and extracts the subtype as `int`.
+* It calls the associated function with the arguments `("std::vector<int>", "int", [1, 2, 3])`.
 
 ### Example of a Templated Parametrized Parser Functions
 Bringing it all together, the smart pointer parser are an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
 ```py
-@parse.register("std::unique_ptr<{}>", make_fn="std::make_unique")
-@parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
-def _(typename, subtype, obj, make_fn) -> str:
-    if obj is not None:
-        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
-    return "nullptr"
+    @ctx.type("std::unique_ptr<{}>", make_fn="std::make_unique")
+    @ctx.type("std::shared_ptr<{}>", make_fn="std::make_shared")
+    def _(typename, subtype, obj, make_fn) -> str:
+        if obj is not None:
+            return f"{make_fn}<{subtype}>{{{ctx.parse(subtype, obj)}}}"
+        return "nullptr"
 ```
 
 ### Variadic Templatized Parser Functions
-Even with all of this, we still cannot represent `std::tuple<Ts...>`, `std::variant<Ts...>`, or any type with a variadic number of types. This can be done using a variadic template parser function, which looks something like this
+Even with all of this, we still cannot represent `std::tuple<Ts...>`, `std::variant<Ts...>`, or any type with a variadic number of types. This can be done using a variadic template parser function,:
 ```py
-@parse.register("std::tuple<{}...>")
-def _(typename, subtypes, obj) -> str:  # Here, "subtypes" is a list of types
-    assert isinstance(obj, list)
-    assert len(subtypes) == len(obj)
-    rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
-    return f"{typename}{{{rep}}}"
+    @ctx.type("std::tuple<{}...>")
+    def _(typename, subtypes, obj) -> str:  # Here, "subtypes" is a list of types
+        assert isinstance(obj, list)
+        assert len(subtypes) == len(obj)
+        rep = ", ".join(ctx.parse(subtype, val) for subtype, val in zip(subtypes, obj))
+        return f"{typename}{{{rep}}}"
 ```
 It is not permitted to have a variadic template and a non-variadic template in the same parser, so something like `my_type<{}, {}...>` is not allowed. However, this can be implemented in the future. The way this works is by first removing the "..." from the string; that is only used to tell the parser to store this separately. After that, it then parses the captured string into the list of types. This is done character by character and counts the brackets ("(", "[", "<", "{"); only ending a current type if the brackets are balanced. This ensures that `"int, float, std::map<int, float>"` is parsed correctly and *not* parsed as `["int", "float", "std::map<int", "float>"]`.
 
@@ -292,71 +296,72 @@ std::monostate
 std::function<{}({})>
 ```
 
-## Plugins
-As the syntax for datamatic is very simple, you may want to be able to express more complex things that simply the attributes in the spec file. For this, datamatic exposes a `Plugin` base class which can be subclassed in `dmx` files which allows the user to create functions in python that return strings that can be used in the templates. For example, you may want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
-```py
-from datamatic.api import Plugin
+## Custom Functions
+As we have already seen, functions can be called in template files with the syntax
+`{{Comp::name}}` for example. This is calling the function `main` which resides in the `Comp` namespace, and all it does it return the component name. There may be other things you wish to print that are more complicated that simply the properties of components and attributes. Via the `Context` object, you can also register your own functions, meaning you can format C++ strings using all the tools in python.
 
-class Upper(Plugin):
-    @compmethod
-    def upper_name(cls, comp):
+For a very simple example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
+```py
+def main(ctx):
+
+    @ctx.compmethod("format.upper")
+    def _(comp):
         return comp["name"].upper()
 ```
 There are a few important things here:
-* The class must derive from `Plugin`.
-* For functions to be exposed to the template generator, they must be decorated with either `compmethod` or `attrmethod`, which act like `classmethod`, hence `cls` being the first argument. `@compmethod` adds the function to the `Comp` namespace and `@attrmethod` exposes the function to the `Attr` method. There is also `@compattrmethod` which adds it to both, but this not used often.
+* The decorator `compmethod` adds the function to the `Comp` namespace, while the `attrmethod` adds the function to the `Attr` namespace. A function can be added to both namespaces.
+* The string in the decorator is the name of the function when exposed to template files. This is specified here rather than using the name of the function to allow punctuation in the funtion name. The convention here is to use periods to "namespace" the functions. This is purely for style; there is no notion of namespacing going on here. Builtin functions for attribute access is not namespaced, and there are some other builtin functions that are not namespaced described more below. To avoid name clashing, all user functions should be namespaced, as I may add more builtin functions to datamatic, which will not be namespaced.
+* The `comp` parameter is the json object representing the component which comes directly from the json spec file.
 
-The above plugin can then be referenced in templates as `{{<namespace>.<plugin_name>.<function_name>}}`:
+The above function can then be referenced in templates:
 ```cpp
 #ifdef DATAMATIC_BLOCK
-std::string {{Comp.name}}_upper()
+std::string {{Comp::name}}Upper()
 {
-    return "{{Comp.Upper.upper_name}}";
+    return "{{Comp::format.upper}}";
 }
 
 #endif
 ```
 This would generate
 ```cpp
-std::string NameComponent_upper()
+std::string NameComponentUpper()
 {
     return "NAMECOMPONENT";
 }
 
-std::string HealthComponent_upper()
+std::string HealthComponentUpper()
 {
     return "HEALTHCOMPONENT";
 }
 
-std::string TransformComponent_upper()
+std::string TransformComponentUpper()
 {
     return "TRANSFORMCOMPONENT";
 }
 ```
-### The `Builtin` Plugin
-When writing something like `{{Comp.name}}`, this is not actually doing a simple attribute lookup from the spec. Instead this resolves to `{{Comp.builtin.name}}` and in fact calls a function called `name` in a provided plugin called `builtin`. This implementation is what you might expect:
+### Builtin Functions
+As we have seen already, `{{Comp::name}}` calls the function `name` in the `Comp` namespace. This is an example of a builtin function. Builtin functions are exactly the same as custom functions, datamatic just explicitly calls `builtin.main(ctx)` before searching for user code, and it uses the exact same API. The implmentation is exactly what you might expect:
 ```py
-class Builtin(Plugin):
-    @compattrmethod
-    def name(cls, obj):
+def main(ctx):
+
+    @ctx.compmethod
+    @ctx.attrmethod
+    def _(obj):
         return obj["name"]
 ```
-Note this uses `@compattrmethod` because it can also be used to access the name of an attribute. This is done primarily for two reasons:
-* It makes "Attribute access" and "Plugin function" all uniform, which simplifies the implementation.
-* It allows datamatic to add more builtin functions in an entensible way.
-
-The `Builtin` plugin also has some extra functionality and can be found [here](datamatic/builtin.py).
+You can find all of the builtin functions and type [here](datamatic/builtin.py).
 
 ### Plugin Function Arguments
-It is also possible to pass arguments to plugin functions using a `|` pipe syntax. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp.if_not_last` function:
+We briefly mentioned earlier that replacement tokens can accept arguments. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp::if_not_last` function:
 ```cpp
 using ECS = TemplatedECS<
 #ifdef DATAMATIC_BLOCK
-    {{Comp.name}}{{Comp.if_not_last|,}}
+    {{Comp::name}}{{Comp::if_not_last(,)}}
 #endif
 >;
 ```
-The `Comp.if_not_last` takes one argument, and if the component is not the last component in the spec, the function resolves to the argument, otherwise it resolves to an empty string. The above example would produce:
+The `Comp::if_not_last` takes one argument, and if the component is not the last component in the spec, the function resolves to the argument, otherwise it resolves to an empty string. The above example would produce:
 ```cpp
 using ECS = TemplatedECS<
     NameComponent,
@@ -364,26 +369,24 @@ using ECS = TemplatedECS<
     TransformComponent
 >;
 ```
-To access these arguments in the plugin, the function must have an `args` parameter:
+These arguments are then passed to the function definition in the order they appear:
 ```py
-# in class Builtin(Plugin):
-    @compmethod
-    def if_not_last(cls, comp, args: list[str]): ...
+    @ctx.compmethod
+    def if_not_last(comp, arg):
 ```
-If the function call in the template code provides arguments but the function implementation does not have an `args` parameter, an error is raised. Conversely if a function implementation has an `args` parameter but the call in the template does not provide any, an error is raised. It is up to the function implementation to verify that the arguments passed make sense.
+Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
 
 ### Plugin Spec Access
-For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp.if_not_last` must know the entire spec in order to know if the current component is the last. Plugins functions can request the spec by having a `spec` parameter. Thus `Comp.if_not_last` could be fully implemented as
+For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp::if_not_last` must know the entire spec in order to know if the current component is the last. The spec can be accessed through the `Context` object as `ctx.spec`. Thus `Comp::if_not_last` could be fully implemented as
 ```py
-# in class Builtin(Plugin):
-    @compmethod
-    def if_not_last(cls, comp, args, spec):
-        assert len(args) == 1
-        return args[0] if comp != spec["components"][-1] else ""
+    @ctx.compmethod
+    def if_not_last(comp, arg):
+        return arg if comp != ctx.spec["components"][-1] else ""
 ```
+This does mean that custom functions could modify the spec, but obviously this is bad practice and you shouldn't do it.
 
 ### Custom Data
-It is also sometimes useful to tag components and attributes with custom data to be used within plugins. For this, the spec schema allows for a `custom` field which is not checked. This can be used to have any kind of information that you want. As an example, suppose you are creating a level editor and want a GUI for entity modification creating with [ImGUI](https://github.com/ocornut/imgui). You could create a plugin that returns ImGUI function calls for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
+It is also sometimes useful to tag components and attributes with custom data to be used within plugins. For this, the spec schema allows for a `custom` field which is not checked. This can be used to have any kind of information that you want. As an example, suppose you are creating a level editor and want a GUI for entity modification created with [ImGUI](https://github.com/ocornut/imgui). You could create a custom function that returns ImGUI function call strings for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
 ```json
 {
     "name": "LightComponent",
@@ -411,11 +414,10 @@ It is also sometimes useful to tag components and attributes with custom data to
     ]
 }
 ```
-Then in the plugin you could write
+Then in the function you could write
 ```py
-class Imgui(Plugin):
-    @attrmethod
-    def interface_function(cls, attr):
+    @ctx.attrmethod
+    def interface_function(attr):
         name = attr["name"]
         display_name = attr["display_name"]
         ...
@@ -432,7 +434,7 @@ I've included drag speed here to emphasise that custom data can be any kind of J
 With the ability to generate template code using the full power of python, it should be possible to generate any kind of code you want. If there are still limitations, let me know, I would love to extend datamatic further to make it more useful!
 
 ## Future
-* Have a nicer syntax for plugin function parameters as the pipe is a bit ugly. The current setup also cannot allow for passing a pipe symbol as a parameter.
+* Have a nicer syntax for plugin function parameters. I would like to make the arguments comma separated and allow "," to be an argument as well. For this I will add a more sophisticated parser, but I haven't done it yet. After doing this, `Comp::if_not_last(,)` would become `Comp::if_not_last(",")` which is more akin to what people should expect.
 * Extend the builtin plugin to provide more useful functionality.
 * Support for more C++ standard types.
 * Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic, but there are some C++ specific things. These things include the `#ifdef DATAMATIC_BLOCK` and the `Type` API. The reason I can use this for Lua is because you don't explicitly mention types so the `Type` API isn't a problem, and I don't make use of intellisense for Lua so the invalid syntax doesn't produce errors.

@@ -1,6 +1,5 @@
 language: python
 python:
-  - "3.7"
   - "3.8"
   - "3.9"
   - "3.9-dev"
@@ -9,11 +8,14 @@ before_install:
   - python --version
   - pip install -U pip
   - pip install -U pytest
+  - pip install -U pytest-cov
   - pip install codecov
 install:
   - pip install -r requirements.txt
   - pip install ".[test]" .
 script:
-  - pytest
+  - pytest --cov-report term --cov=datamatic/
+env:
+  - CODECOV_TOKEN: 06d2ca6c-f0a2-4ed3-8ce7-2904634600c8
 after_success:
   - codecov
