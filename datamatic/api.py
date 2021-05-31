@@ -39,6 +39,46 @@ def parse_variadic_typelist(string):
     return tokens
 
 
+class TypeParser:
+    def __init__(self):
+        self.dispatchers = {}
+        self.template_dispatchers = {}
+        self.variadic_dispatchers = {}
+
+    def register(self, first, **kwargs):
+        def decorator(func):
+            if "{}..." in first:
+                assert first.count("{}") == 1, "Variadic and non-variadic mixing not supported"
+                newfirst = first.replace("{}...", "{}")
+                assert newfirst not in self.variadic_dispatchers, f"'{newfirst}' already has a registered parser"
+                self.variadic_dispatchers[newfirst] = functools.partial(func, **kwargs)
+            elif "{}" in first:
+                assert first not in self.template_dispatchers, f"'{first}' already has a registered parser"
+                self.template_dispatchers[first] = functools.partial(func, **kwargs)
+            else:
+                assert first not in self.dispatchers, f"'{first}' already has a registered parser"
+                self.dispatchers[first] = functools.partial(func, **kwargs)
+            return func
+        return decorator
+
+    def parse(self, first, *args, **kwargs):
+        if first in self.dispatchers:
+            return self.dispatchers[first](first, *args, **kwargs)
+
+        for key, value in self.template_dispatchers.items():
+            result = _parse.parse(key, first)
+            if result is not None:
+                types = list(result)
+                return value(first, *types, *args, **kwargs)
+
+        for key, value in self.variadic_dispatchers.items():
+            result = _parse.parse(key, first)
+            if result is not None:
+                types = parse_variadic_typelist(result[0])
+                return value(first, types, *args, **kwargs)
+
+        raise RuntimeError(f"No parser registered for '{first}'")
+
 class Context:
     def __init__(self):
         # Plugin Functions
@@ -46,10 +86,7 @@ class Context:
         self.attrmethods = {}
         self.compattrmethods = {}
 
-        # Type Parsers
-        self.dispatchers = {}
-        self.template_dispatchers = {}
-        self.variadic_dispatchers = {}
+        self.types = TypeParser()
 
     def compmethod(self, plugin, name):
         def decorate(function):
@@ -81,38 +118,3 @@ class Context:
             return self.compattrmethods[namespace, plugin, name]
 
         raise RuntimeError(f"Could not find {namespace}.{plugin}.{name}")
-
-
-    def __call__(self, first, *args, **kwargs):
-        if first in self.dispatchers:
-            return self.dispatchers[first](first, *args, **kwargs)
-
-        for key, value in self.template_dispatchers.items():
-            result = _parse.parse(key, first)
-            if result is not None:
-                types = list(result)
-                return value(first, *types, *args, **kwargs)
-
-        for key, value in self.variadic_dispatchers.items():
-            result = _parse.parse(key, first)
-            if result is not None:
-                types = parse_variadic_typelist(result[0])
-                return value(first, types, *args, **kwargs)
-
-        raise RuntimeError(f"No parser registered for '{first}'")
-
-    def register(self, first, **kwargs):
-        def decorator(func):
-            if "{}..." in first:
-                assert first.count("{}") == 1, "Variadic and non-variadic mixing not supported"
-                newfirst = first.replace("{}...", "{}")
-                assert newfirst not in self.variadic_dispatchers, f"'{newfirst}' already has a registered parser"
-                self.variadic_dispatchers[newfirst] = functools.partial(func, **kwargs)
-            elif "{}" in first:
-                assert first not in self.template_dispatchers, f"'{first}' already has a registered parser"
-                self.template_dispatchers[first] = functools.partial(func, **kwargs)
-            else:
-                assert first not in self.dispatchers, f"'{first}' already has a registered parser"
-                self.dispatchers[first] = functools.partial(func, **kwargs)
-            return func
-        return decorator
