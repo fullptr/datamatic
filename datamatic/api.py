@@ -81,7 +81,6 @@ class TypeParser:
 
 class Context:
     def __init__(self):
-        # Plugin Functions
         self.compmethods = {}
         self.attrmethods = {}
         self.compattrmethods = {}
