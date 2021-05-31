@@ -2,6 +2,7 @@
 A python package for generating C++ and Lua source code.
 
 [![Build Status](https://travis-ci.com/MagicLemma/datamatic.svg?branch=main)](https://travis-ci.com/MagicLemma/datamatic)
+[![codecov](https://codecov.io/gh/MagicLemma/datamatic/branch/main/graph/badge.svg?token=4BJRUHXX5H)](https://codecov.io/gh/MagicLemma/datamatic)
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/MagicLemma/datamatic/blob/main/LICENSE)
 
 ## Motivation
