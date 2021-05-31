@@ -26,7 +26,10 @@ def main(ctx: context.Context):
 
     @ctx.compmethod("if_nth_else")
     def if_nth_else(comp, n, yes_token, no_token):
-        return yes_token if comp == ctx.spec["components"][int(n)] else no_token
+        try:
+            return yes_token if comp == ctx.spec["components"][int(n)] else no_token
+        except IndexError:
+            return no_token
 
     @ctx.compmethod("if_first")
     def _(comp, token):

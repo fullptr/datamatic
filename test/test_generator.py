@@ -24,7 +24,12 @@ def test_parse_token_string_success(raw, token):
 
 
 @pytest.mark.parametrize("raw", [
-
+    "Comp",
+    "Comp::foo::bar"
+    "Comp::foo(a"
+    "Comp::foo(a|"
+    "Comp::foo(a|b|)"
 ])
 def test_parse_token_string_failure(raw):
-    pass
+    with pytest.raises(Exception):
+        generator.parse_token_string(raw)
