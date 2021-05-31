@@ -192,3 +192,18 @@ def test_typeparser_variadic_register():
     # THEN
     expected = f"foo<int, float, int>, ['int', 'float', 'int'], None"
     assert parse("foo<int, float, int>", None) == expected
+
+
+def test_variadic_typelist_parser():
+    assert api.parse_variadic_typelist("") == []
+    assert api.parse_variadic_typelist("int") == ["int"]
+    assert api.parse_variadic_typelist("int, float, std::map<int, int>") == ["int", "float", "std::map<int, int>"]
+    assert api.parse_variadic_typelist("std::pair<a, b>, std::tuple<a, b, c>") == ["std::pair<a, b>", "std::tuple<a, b, c>"]
+
+    assert api.parse_variadic_typelist("std::function<int(bool, float)>, int") == ["std::function<int(bool, float)>", "int"]
+    
+    with pytest.raises(Exception):
+        api.parse_variadic_typelist("std::function<int(bool>)")  # Invalid bracket ordering
+    
+    with pytest.raises(Exception):
+        api.parse_variadic_typelist("std::pair<")  # Invalid brackets

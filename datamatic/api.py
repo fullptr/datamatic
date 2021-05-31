@@ -32,7 +32,8 @@ def parse_variadic_typelist(string):
             continue
         current += c
 
-    tokens.append(current.strip()) # Append last type
+    if len(current) > 0:
+        tokens.append(current.strip()) # Append last type
     if stack != []:
         raise RuntimeError(f"Invalid type list '{string}'")
     return tokens
