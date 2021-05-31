@@ -19,30 +19,23 @@ class Token:
 def parse_token_string(raw_string: str) -> Token:
     """
     Format:
-    ("Comp"|"Attr") "." function_name ["|" function_arg]*
+    ("Comp"|"Attr") "::" function_name ["|" function_arg]*
 
     Examples:
-    "Comp.conditional.if_nth_else|2|,|."
-    "Comp.name"
+    "Comp::conditional.if_nth_else|2|,|."
+    "Comp::name"
     """
-    *tokens, last_token = raw_string.split(".")
-    last_token, *args = last_token.split("|")
-    tokens = *tokens, last_token
-    args = tuple(args)
-
-    namespace = tokens[0]
-    if len(tokens) == 2:
-        function_name = tokens[1]
-    elif len(tokens) == 3:
-        function_name = ".".join([tokens[1], tokens[2]])
-    else:
-        raise RuntimeError(f"Invalid token {raw_string}")
+    try:
+        namespace, rest = raw_string.split("::")
+        function_name, *args = rest.split("|")
+    except ValueError as e:
+        raise RuntimeError(f"Error: {e}, {raw_string=}") from e
 
     return Token(
         raw_string=raw_string,
         namespace=namespace,
         function_name=function_name,
-        args=args
+        args=tuple(args)
     )
 
 
@@ -101,13 +94,13 @@ def process_block(spec, block, flags, context):
     out = ""
     for comp in get_comps(spec, flags):
         for line in block:
-            while "{{Comp." in line:
+            while "{{Comp::" in line:
                 line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp, context=context), line)
 
-            if "{{Attr." in line:
+            if "{{Attr::" in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
-                    while "{{Attr." in newline:
+                    while "{{Attr::" in newline:
                         newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr, context=context), newline)
 
                     out += newline + "\n"
