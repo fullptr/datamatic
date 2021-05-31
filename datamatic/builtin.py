@@ -143,11 +143,13 @@ def main(ctx: context.Context):
         return obj
 
 
-    @ctx.compattrmethod("name")
+    @ctx.compmethod("name")
+    @ctx.attrmethod("name")
     def _(obj):
         return obj["name"]
 
-    @ctx.compattrmethod("display_name")
+    @ctx.compmethod("display_name")
+    @ctx.attrmethod("display_name")
     def _(obj):
         return obj["display_name"]
 

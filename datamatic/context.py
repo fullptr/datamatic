@@ -79,7 +79,6 @@ class Context:
     def __init__(self):
         self.compmethods = {}
         self.attrmethods = {}
-        self.compattrmethods = {}
 
         self.types = TypeParser()
     
@@ -97,21 +96,11 @@ class Context:
             return function
         return decorate
 
-    def compattrmethod(self, function_name):
-        def decorate(function):
-            self.compmethod(function_name)(function)
-            self.attrmethod(function_name)(function)
-            return function
-        return decorate
-
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.compmethods:
             return self.compmethods[namespace, function_name]
 
         if (namespace, function_name) in self.attrmethods:
             return self.attrmethods[namespace, function_name]
-
-        if (namespace, function_name) in self.compattrmethods:
-            return self.compattrmethods[namespace, function_name]
 
         raise RuntimeError(f"Could not find {namespace}.{function_name}")
