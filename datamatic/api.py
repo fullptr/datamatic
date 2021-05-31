@@ -38,12 +38,12 @@ def parse_variadic_typelist(string):
     return tokens
 
 
-class SingleDispatch:
+class TypeParser:
     """
-    A decorator class designed to implement single dispatch on the first argument of a function.
+    An object used for parsing json objects into C++ representations. New types can be
+    registered at runtime. By default, most C++ standard types are parsable.
     """
-    def __init__(self, func):
-        self.func = func
+    def __init__(self):
         self.dispatchers = {}
         self.template_dispatchers = {}
         self.variadic_dispatchers = {}
@@ -64,7 +64,7 @@ class SingleDispatch:
                 types = parse_variadic_typelist(result[0])
                 return value(first, types, *args, **kwargs)
 
-        return self.func(first, *args, **kwargs)
+        raise RuntimeError(f"No parser registered for '{first}'")
 
     def register(self, first, **kwargs):
         def decorator(func):
@@ -83,13 +83,7 @@ class SingleDispatch:
         return decorator
 
 
-@SingleDispatch
-def parse(typename, obj) -> str:
-    """
-    Parse the given object as the given type. A KeyError is raised if there is no
-    parser registered for the given type.
-    """
-    raise RuntimeError(f"No parser registered for '{typename}'")
+parse = TypeParser()
 
 
 @parse.register("int")
@@ -173,7 +167,7 @@ def _(typename, keytype, valuetype, obj) -> str:
     else:
         raise RuntimeError(f"Could not parse {obj} as {typename}")
 
-    rep = "' ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in pairs)
+    rep = ", ".join(f"{{{parse(keytype, k)}, {parse(valuetype, v)}}}" for k, v in pairs)
     return f"{typename}{{{rep}}}"
 
 
@@ -190,7 +184,7 @@ def _(typename, subtype, obj) -> str:
 @parse.register("std::shared_ptr<{}>", make_fn="std::make_shared")
 def _(typename, subtype, obj, make_fn) -> str:
     if obj is not None:
-        return f"{make_fn}<{subtype}>{{{parse(subtype, obj)}}}"
+        return f"{make_fn}<{subtype}>({parse(subtype, obj)})"
     return "nullptr"
 
 
@@ -201,7 +195,9 @@ def _(typename, subtype, obj) -> str:
 
 
 @parse.register("std::any")
+@parse.register("std::monostate")
 def _(typename, obj) -> str:
+    assert obj is None
     return f"{typename}{{}}"
 
 
@@ -211,12 +207,6 @@ def _(typename, subtypes, obj) -> str:
     assert len(subtypes) == len(obj)
     rep = ", ".join(parse(subtype, val) for subtype, val in zip(subtypes, obj))
     return f"{typename}{{{rep}}}"
-
-
-@parse.register("std::monostate")
-def _(typename, obj) -> str:
-    assert obj is None
-    return f"{typename}{{}}"
 
 
 @parse.register("std::variant<{}...>")
