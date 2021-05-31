@@ -4,9 +4,6 @@ from typing import Tuple, Literal
 from dataclasses import dataclass
 from functools import partial
 
-from .builtin import Builtin
-from .api import Plugin
-
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
@@ -36,7 +33,7 @@ def parse_token_string(raw_string: str) -> Token:
 
     namespace = tokens[0]
     if len(tokens) == 2:
-        plugin_name = Builtin.__name__
+        plugin_name = "Builtin"
         function_name = tokens[1]
     elif len(tokens) == 3:
         plugin_name = tokens[1]
@@ -53,7 +50,7 @@ def parse_token_string(raw_string: str) -> Token:
     )
 
 
-def replace_token(matchobj, spec, obj):
+def replace_token(matchobj, spec, obj, type_parser, plugin_list):
     """
     Given a matchobj of the text that needs replacing, construct a token to find what
     function needs to be called to get the replacement string.
@@ -69,14 +66,14 @@ def replace_token(matchobj, spec, obj):
                 expects args but there are none in the Token, an exception is raied.
     """
     token = parse_token_string(matchobj.group(1))
-    function = Plugin.get_function(token.namespace, token.plugin_name, token.function_name)
+    function = plugin_list.get(token.namespace, token.plugin_name, token.function_name)
 
     sig = inspect.signature(function)
     assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
     
     _, *parameter_names = list(sig.parameters.keys())
     unknowns = set(parameter_names) - {"args", "spec"}
-    assert not unknowns, f"Unknown parameters: {unknowns}"
+    assert not unknowns, f"Unknown parameters {unknowns} for {matchobj=}, {obj=}"
     
     params = {}
 
@@ -104,18 +101,18 @@ def get_comps(spec, flags):
             yield comp
 
 
-def process_block(spec, block, flags):
+def process_block(spec, block, flags, type_parser, plugin_list):
     out = ""
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp." in line:
-                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp), line)
+                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp, type_parser=type_parser, plugin_list=plugin_list), line)
 
             if "{{Attr." in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr." in newline:
-                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr), newline)
+                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr, type_parser=type_parser, plugin_list=plugin_list), newline)
 
                     out += newline + "\n"
             else:
@@ -146,7 +143,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src):
+def run(spec, src, type_parser, plugin_list):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:
@@ -161,7 +158,7 @@ def run(spec, src):
 
         if in_block:
             if line == "#endif":
-                out += process_block(spec, block, flags)
+                out += process_block(spec, block, flags, type_parser, plugin_list)
                 in_block = False
                 block = []
                 flags = set()

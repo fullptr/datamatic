@@ -39,6 +39,44 @@ def parse_variadic_typelist(string):
     return tokens
 
 
+class PluginList:
+    def __init__(self):
+        self.compmethods = {}
+        self.attrmethods = {}
+        self.compattrmethods = {}
+
+    def compmethod(self, plugin, name):
+        def decorate(function):
+            self.compmethods["Comp", plugin, name] = function
+            return function
+        return decorate
+
+    def attrmethod(self, plugin, name):
+        def decorate(function):
+            self.attrmethods["Attr", plugin, name] = function
+            return function
+        return decorate
+
+    def compattrmethod(self, plugin, name):
+        def decorate(function):
+            self.compmethods["Comp", plugin, name] = function
+            self.attrmethods["Attr", plugin, name] = function
+            return function
+        return decorate
+
+    def get(self, namespace, plugin, name):
+        if (namespace, plugin, name) in self.compmethods:
+            return self.compmethods[namespace, plugin, name]
+
+        if (namespace, plugin, name) in self.attrmethods:
+            return self.attrmethods[namespace, plugin, name]
+
+        if (namespace, plugin, name) in self.compattrmethods:
+            return self.compattrmethods[namespace, plugin, name]
+
+        raise RuntimeError(f"Could not find {namespace}.{plugin}.{name}")
+
+
 class TypeParser:
     """
     An object used for parsing json objects into C++ representations. New types can be

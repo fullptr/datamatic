@@ -2,8 +2,6 @@
 Validates a given schema to make sure it is well-formed. This should
 also serve as documentation for what makes a valid schema.
 """
-from .builtin import Builtin
-
 
 COMP_KEYS_REQ = {
     "name",
@@ -37,7 +35,7 @@ FLAG_KEYS = {
 }
 
 
-def validate_attribute(attr, flags):
+def validate_attribute(attr, flags, plugin_list):
     """
     Asserts that the given attribute is well-formed.
     """
@@ -48,7 +46,7 @@ def validate_attribute(attr, flags):
     assert isinstance(attr["display_name"], str), attr
 
     # Verify that accessing the default value succeeds.
-    Builtin.default(attr)
+    plugin_list.get("Attr", "Builtin", "default")(attr)
 
     if "flags" in attr:
         assert isinstance(attr["flags"], dict)
@@ -67,7 +65,7 @@ def validate_flag(flag):
     assert isinstance(flag["default"], bool), flag
 
 
-def validate_component(comp, flags):
+def validate_component(comp, flags, plugin_list):
     """
     Asserts that the given component is well-formed.
     """
@@ -86,10 +84,10 @@ def validate_component(comp, flags):
             assert isinstance(val, bool), comp
 
     for attr in comp["attributes"]:
-        validate_attribute(attr, flags)
+        validate_attribute(attr, flags, plugin_list)
 
 
-def run(spec):
+def run(spec, plugin_list):
     """
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
@@ -105,6 +103,6 @@ def run(spec):
     flags = {flag["name"] for flag in spec["flags"]}
 
     for comp in spec["components"]:
-        validate_component(comp, flags)
+        validate_component(comp, flags, plugin_list)
 
     print("Schema Valid!")
