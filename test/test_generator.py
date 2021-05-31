@@ -33,3 +33,16 @@ def test_parse_token_string_success(raw, token):
 def test_parse_token_string_failure(raw):
     with pytest.raises(Exception):
         generator.parse_token_string(raw)
+
+
+def test_flag_filtering():
+    obj1 = {"flags": {"flag1": True, "flag2": False}}
+    obj2 = {"flags": {"flag1": True, "flag2": True}}
+    obj3 = {"flags": {"flag1": False, "flag2": False}}
+    obj4 = {"flags": {"flag1": True, "flag2": True}}
+    objects = [obj1, obj2, obj3, obj4]
+
+    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": True})) == [obj2, obj4]
+    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": False})) == [obj1]
+    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": True})) == []
+    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": False})) == [obj3]
