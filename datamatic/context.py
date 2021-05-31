@@ -4,7 +4,6 @@ Users can implement plugins that hook up to tokens in dm files for
 custom behaviour.
 """
 import functools
-from contextlib import suppress
 import parse
 
 

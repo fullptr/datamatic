@@ -1,7 +1,7 @@
 import re
 import inspect
-from typing import Tuple, Literal
-from dataclasses import dataclass
+from typing import Tuple, Literal, Optional
+from dataclasses import dataclass, field
 from functools import partial
 import parse
 
@@ -11,10 +11,10 @@ TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
 @dataclass(frozen=True)
 class Token:
-    raw_string: str
     namespace: Literal["Comp", "Attr"]
     function_name: str
     args: Tuple[str]
+    raw_string: Optional[str] = field(default=None, compare=False)
 
 
 def parse_token_string(raw_string: str) -> Token:
@@ -38,10 +38,10 @@ def parse_token_string(raw_string: str) -> Token:
         raise RuntimeError(f"Error: {e}, {raw_string=}") from e
 
     return Token(
-        raw_string=raw_string,
         namespace=namespace,
         function_name=function_name,
-        args=args
+        args=args,
+        raw_string=raw_string,
     )
 
 

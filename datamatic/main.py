@@ -7,16 +7,16 @@ import json
 import sys
 import importlib.util
 
-from . import validator, generator, api, builtin
+from . import validator, generator, context, builtin
 
 
-def discover(directory, context: api.Context):
+def discover(directory, ctx: context.Context):
     for file in directory.glob("**/*.dmx.py"):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         sys.modules[spec.name] = module
-        sys.modules[spec.name].main(context)
+        sys.modules[spec.name].main(ctx)
 
 
 def fill_flag_defaults(spec):
@@ -61,19 +61,19 @@ def main(args):
     """
     Entry point.
     """
-    context = api.Context()
+    ctx = context.Context()
 
-    builtin.main(context)
-    discover(args.dir, context)
+    builtin.main(ctx)
+    discover(args.dir, ctx)
 
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
 
     fill_flag_defaults(spec)
 
-    validator.run(spec, context)
+    validator.run(spec, ctx)
 
     for file in args.dir.glob("**/*.dm.*"):
-        generator.run(spec, file, context)
+        generator.run(spec, file, ctx)
 
     print("Done!")
