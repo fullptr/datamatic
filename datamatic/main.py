@@ -59,15 +59,13 @@ def main(args):
     """
     Entry point.
     """
-    ctx = context.Context()
-
-    builtin.main(ctx)
-    discover(args.dir, ctx)
-
     with args.spec.open() as specfile:
         spec = json.loads(specfile.read())
+        fill_flag_defaults(spec)
 
-    fill_flag_defaults(spec)
+    ctx = context.Context(spec)
+    builtin.main(ctx)
+    discover(args.dir, ctx)
 
     validator.run(spec, ctx)
 

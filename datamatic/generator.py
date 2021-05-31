@@ -1,5 +1,4 @@
 import re
-import inspect
 from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
@@ -45,43 +44,14 @@ def parse_token_string(raw_string: str) -> Token:
     )
 
 
-def replace_token(matchobj, spec, obj, context):
+def replace_token(matchobj, obj, context):
     """
-    Given a matchobj of the text that needs replacing, construct a token to find what
-    function needs to be called to get the replacement string.
-    
-    After finding the function, inspect its signature. It must have at least one parameter
-    and that is always bound to the object (component or attribute) currently in use.
-    
-    After the first parameter, the following other parameter names are allowed:
-        - spec: If specified, the entire component spec is bound to this parameter
-        - args: If specified, the arguments found in the Token are bound to this parameter.
-                Additionally, if there are arguments in the token but the function does not
-                have this parameter, an exception is raised. Conversely, if the function
-                expects args but there are none in the Token, an exception is raied.
+    Parse the replacement token in the matchobj to figure out the namespace, function name
+    and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
     token = parse_token_string(matchobj.group(1))
     function = context.get(token.namespace, token.function_name)
-
-    sig = inspect.signature(function)
-    assert len(sig.parameters) > 0, f"Invalid function signature for {token}"
-    
-    _, *parameter_names = list(sig.parameters.keys())
-    unknowns = set(parameter_names) - {"args", "spec"}
-    assert not unknowns, f"Unknown parameters {unknowns} for {matchobj=}, {obj=}"
-    
-    params = {}
-
-    if "spec" in parameter_names:
-        params["spec"] = spec
-
-    if "args" in parameter_names:
-        assert len(token.args) > 0
-        params["args"] = token.args
-    else:
-        assert len(token.args) == 0
-
-    return function(obj, **params)
+    return function(obj, *token.args)
 
 
 def get_attrs(comp, flags):
@@ -101,13 +71,13 @@ def process_block(spec, block, flags, context):
     for comp in get_comps(spec, flags):
         for line in block:
             while "{{Comp::" in line:
-                line = TOKEN.sub(partial(replace_token, spec=spec, obj=comp, context=context), line)
+                line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
 
             if "{{Attr::" in line:
                 for attr in get_attrs(comp, flags):
                     newline = line
                     while "{{Attr::" in newline:
-                        newline = TOKEN.sub(partial(replace_token, spec=spec, obj=attr, context=context), newline)
+                        newline = TOKEN.sub(partial(replace_token, obj=attr, context=context), newline)
 
                     out += newline + "\n"
             else:

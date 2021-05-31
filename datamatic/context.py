@@ -74,7 +74,9 @@ class TypeParser:
         raise RuntimeError(f"No parser registered for '{first}'")
 
 class Context:
-    def __init__(self):
+    def __init__(self, spec):
+        self.spec = spec
+        
         self.compmethods = {}
         self.attrmethods = {}
 
@@ -96,6 +98,9 @@ class Context:
 
     def type(self, *args, **kwargs):
         return self.types.register(*args, **kwargs)
+
+    def parse(self, *args, **kwargs):
+        return self.types.parse(*args, **kwargs)
 
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.compmethods:
