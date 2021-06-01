@@ -238,7 +238,7 @@ When calling `ctx.parse("std::vector<int>", [1, 2, 3])`, the following happens
 * It calls the associated function with the arguments `("std::vector<int>", "int", [1, 2, 3])`.
 
 ### Example of a Templated Parametrized Parser Functions
-Bringing it all together, the smart pointer parser are an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
+Bringing it all together, the smart pointer parser is an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
 ```py
     @ctx.type("std::unique_ptr<{}>", make_fn="std::make_unique")
     @ctx.type("std::shared_ptr<{}>", make_fn="std::make_shared")
@@ -298,8 +298,7 @@ std::function<{}({})>
 ```
 
 ## Custom Functions
-As we have already seen, functions can be called in template files with the syntax
-`{{Comp::name}}` for example. This is calling the function `main` which resides in the `Comp` namespace, and all it does it return the component name. There may be other things you wish to print that are more complicated that simply the properties of components and attributes. Via the `Context` object, you can also register your own functions, meaning you can format C++ strings using all the tools in python.
+As we have already seen, functions can be called in template files with the syntax `{{Comp::name}}` for example. This is calling the function `name` which resides in the `Comp` namespace, and all it does it return the component name. There may be other things you wish to print that are more complicated that simply the properties of components and attributes. Via the `Context` object, you can also register your own functions, meaning you can format C++ strings using all the tools in python.
 
 For a very simple example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
@@ -346,8 +345,8 @@ As we have seen already, `{{Comp::name}}` calls the function `name` in the `Comp
 ```py
 def main(ctx):
 
-    @ctx.compmethod
-    @ctx.attrmethod
+    @ctx.compmethod("name")
+    @ctx.attrmethod("name")
     def _(obj):
         return obj["name"]
 ```
