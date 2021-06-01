@@ -371,16 +371,16 @@ using ECS = TemplatedECS<
 ```
 These arguments are then passed to the function definition in the order they appear:
 ```py
-    @ctx.compmethod
-    def if_not_last(comp, arg):
+    @ctx.compmethod("if_not_last")
+    def _(comp, arg):
 ```
 Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
 
 ### Plugin Spec Access
 For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp::if_not_last` must know the entire spec in order to know if the current component is the last. The spec can be accessed through the `Context` object as `ctx.spec`. Thus `Comp::if_not_last` could be fully implemented as
 ```py
-    @ctx.compmethod
-    def if_not_last(comp, arg):
+    @ctx.compmethod("if_not_last")
+    def _(comp, arg):
         return arg if comp != ctx.spec["components"][-1] else ""
 ```
 This does mean that custom functions could modify the spec, but obviously this is bad practice and you shouldn't do it.
@@ -416,8 +416,8 @@ It is also sometimes useful to tag components and attributes with custom data to
 ```
 Then in the function you could write
 ```py
-    @ctx.attrmethod
-    def interface_function(attr):
+    @ctx.attrmethod("interface.component")
+    def _(attr):
         name = attr["name"]
         display_name = attr["display_name"]
         ...
