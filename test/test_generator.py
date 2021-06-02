@@ -24,6 +24,10 @@ def test_parse_token_string_success(raw, token):
     assert token == generator.parse_token_string(raw)
 
 
+def test_empty_parentheses_is_valid():
+    assert generator.parse_token_string("Comp::foo()") == Token("Comp", "foo", tuple())
+
+
 @pytest.mark.parametrize("raw", [
     "Comp",
     "Comp::foo::bar"

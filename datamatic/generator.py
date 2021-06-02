@@ -30,6 +30,9 @@ def parse_token_string(raw_string: str) -> Token:
         if result := parse.parse("{}({})", rest):
             function_name = result[0]
             args = tuple(arg.strip() for arg in result[1].split("|"))
+        elif result := parse.parse("{}()", rest):
+            function_name = result[0]
+            args = tuple()
         else:
             function_name = rest
             args = tuple()
@@ -116,17 +119,17 @@ def run(spec, src, context):
         line = line.rstrip()
 
         if in_block:
-            if line == "#endif":
+            if line == "DATAMATIC_BLOCK_END":
                 out += process_block(spec, block, flags, context)
                 in_block = False
                 block = []
                 flags = set()
             else:
                 block.append(line)
-        elif line.startswith("#ifdef DATAMATIC_BLOCK"):
+        elif line.startswith("DATAMATIC_BLOCK_START"):
             assert not in_block
             in_block = True
-            flags = parse_flags(set(line.split()[2:]))
+            flags = parse_flags(set(line.split()[1:]))
         else:
             out += line + "\n"
 
