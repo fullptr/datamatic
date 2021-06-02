@@ -105,11 +105,16 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def parse_file(lines, spec, context):
+def run(spec, src, context):
+    dst = src.parent / src.name.replace(".dm.", ".")
+
+    with src.open() as srcfile:
+        lines = srcfile.readlines()
+
     in_block = False
     block = []
     flags = set()
-    out = ""
+    out = get_header(dst)
     for line in lines:
         line = line.rstrip()
 
@@ -127,17 +132,6 @@ def parse_file(lines, spec, context):
             flags = parse_flags(set(line.split()[1:]))
         else:
             out += line + "\n"
-    return out
-
-
-def run(spec, src, context):
-    dst = src.parent / src.name.replace(".dm.", ".")
-
-    with src.open() as srcfile:
-        lines = srcfile.readlines()
-
-    out = get_header(dst)
-    out += parse_file(lines, spec, context)
 
     if dst.exists():
         with dst.open() as dstfile:
