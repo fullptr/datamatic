@@ -119,14 +119,14 @@ def run(spec, src, context):
         line = line.rstrip()
 
         if in_block:
-            if line == "DATAMATIC_BLOCK_END":
+            if line == "DATAMATIC_END":
                 out += process_block(spec, block, flags, context)
                 in_block = False
                 block = []
                 flags = set()
             else:
                 block.append(line)
-        elif line.startswith("DATAMATIC_BLOCK_START"):
+        elif line.startswith("DATAMATIC_BEGIN"):
             assert not in_block
             in_block = True
             flags = parse_flags(set(line.split()[1:]))
