@@ -67,3 +67,21 @@ def test_get_header():
     assert generator.get_header(Path("file.cpp")) == "// GENERATED FILE\n"
     assert generator.get_header(Path("file.lua")) == "-- GENERATED FILE\n"
 
+
+def test_parse_flags_good():
+    flags = ["a=true", "b=true", "c=false"]
+    assert generator.parse_flags(flags) == {"a": True, "b": True, "c": False}
+
+
+def test_parse_flags_bad():
+    flags = ["a=3", "b=2"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
+
+    flags = ["a=3", "b=true=false"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
+
+    flags = ["a=3", "true"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
