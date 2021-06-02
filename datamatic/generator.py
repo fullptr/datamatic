@@ -105,21 +105,16 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src, context):
-    dst = src.parent / src.name.replace(".dm.", ".")
-
-    with src.open() as srcfile:
-        lines = srcfile.readlines()
-
+def parse_file(lines, spec, context):
     in_block = False
     block = []
     flags = set()
-    out = get_header(dst)
+    out = ""
     for line in lines:
         line = line.rstrip()
 
         if in_block:
-            if line == "DATAMATIC_END":
+            if line.startswith("DATAMATIC_END"):
                 out += process_block(spec, block, flags, context)
                 in_block = False
                 block = []
@@ -132,6 +127,17 @@ def run(spec, src, context):
             flags = parse_flags(set(line.split()[1:]))
         else:
             out += line + "\n"
+    return out
+
+
+def run(spec, src, context):
+    dst = src.parent / src.name.replace(".dm.", ".")
+
+    with src.open() as srcfile:
+        lines = srcfile.readlines()
+
+    out = get_header(dst)
+    out += parse_file(lines, spec, context)
 
     if dst.exists():
         with dst.open() as dstfile:
