@@ -79,12 +79,15 @@ def test_parse_double(ctx):
     assert ctx.parse("double", 5) == "5.0"
     assert ctx.parse("double", 2.0) == "2.0"
 
+    with pytest.raises(RuntimeError):
+        ctx.parse("double", [])  # Must be an int or float
+
 
 def test_parse_bool(ctx):
     assert ctx.parse("bool", True) == "true"
     assert ctx.parse("bool", False) == "false"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("bool", 1)  # No implicit conversion
 
 
@@ -107,33 +110,39 @@ def test_parse_string(ctx):
 def test_parse_sequence(ctx, container):
     assert ctx.parse(f"{container}<int>", [1, 2, 3, 4]) == f"{container}<int>{{1, 2, 3, 4}}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(f"{container}<int>", 1)  # Object must be a list
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(f"{container}<int>", ["a", "b"])  # Object must be a list of ints
 
 
 def test_parse_array(ctx):
     assert ctx.parse("std::array<int, 5>", [1, 2, 3, 4, 5]) == "std::array<int, 5>{1, 2, 3, 4, 5}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::array<int, 4>", [1, 2, 3, 4, 5])  # Not enough elements
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::array<int, 6>", [1, 2, 3, 4, 5])  # Too many elements
+
+    with pytest.raises(RuntimeError):
+        ctx.parse("std::array<int, a>", [1, 2])  # Second arg must be integral
+
+    with pytest.raises(RuntimeError):
+        ctx.parse("std::array<int, 5>", 5)  # Obj must be a list
 
 
 def test_parse_pair(ctx):
     assert ctx.parse("std::pair<int, float>", [2, 3.0]) == "std::pair<int, float>{2, 3.0f}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::pair<int, float>", 2)  # Must be a list
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::pair<int, float>", [2, 3.0, 1])  # Must be a list of two elements
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::pair<int, float>", [2, "a"])  # Element types must match
 
 
@@ -152,7 +161,7 @@ def test_parse_mapping(ctx, container):
     # Dict JSON object
     assert ctx.parse(f"{container}<int, int>", {1: 2, 3: 4}) == expected
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(f"{container}<int, int>", 1)  # Object must be a list or dict
 
 
@@ -170,7 +179,7 @@ def test_parse_smart_pointer(ctx, ptr_type):
 def test_parse_weak_pointer(ctx):
     assert ctx.parse("std::weak_ptr<int>", None) == "nullptr"
     
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::weak_ptr<int>", 4)  # weak pointers can only be initialised to nullptr
 
 
@@ -178,7 +187,7 @@ def test_parse_weak_pointer(ctx):
 def test_parse_any_and_monostate(ctx, typ):
     assert ctx.parse(typ, None) == f"{typ}{{}}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(typ, 5)  # Can only default initialise
 
 
@@ -186,11 +195,14 @@ def test_parse_tuple(ctx):
     tuple_type = "std::tuple<int, float, double>"
     assert ctx.parse(tuple_type, [1, 1, 1]) == f"{tuple_type}{{1, 1.0f, 1.0}}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(tuple_type, [1, 2])  # Not enough elements
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse(tuple_type, ["a", "b", "c"])  # Type mismatch
+
+    with pytest.raises(RuntimeError):
+        ctx.parse(tuple_type, 5)  # Obj must be a list
 
 
 def test_parse_variant(ctx):
@@ -200,10 +212,13 @@ def test_parse_variant(ctx):
     assert ctx.parse("std::variant<int, std::string>", "Hello") == '"Hello"'
     assert ctx.parse("std::variant<int, std::map<int, int>>", {1: 2}) == "std::map<int, int>{{1, 2}}"
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         ctx.parse("std::variant<int, std::string>", None)  # Value does not parse as any subtype
 
 
 def test_parse_function(ctx):
     # No checks occur on std::function
     assert ctx.parse("std::function<int(bool)>", "a") == "a"
+
+    with pytest.raises(RuntimeError):
+        ctx.parse("std::function<int(bool)>", 5)  # Must be a string

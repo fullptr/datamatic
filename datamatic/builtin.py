@@ -159,13 +159,15 @@ def main(ctx: context.Context):
 
     @ctx.type("std::weak_ptr<{}>")
     def _(typename, subtype, obj) -> str:
-        assert obj is None
+        if obj is not None:
+            raise RuntimeError(f"{typename} must be initialised with null (nullptr)")
         return "nullptr"
 
     @ctx.type("std::any")
     @ctx.type("std::monostate")
     def _(typename, obj) -> str:
-        assert obj is None
+        if obj is not None:
+            raise RuntimeError(f"{typename} must be initialised with null (nullptr)")
         return f"{typename}{{}}"
 
     @ctx.type("std::tuple<{}...>")
