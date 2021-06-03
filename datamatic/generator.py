@@ -1,5 +1,5 @@
 import re
-import copy
+import pathlib
 from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
