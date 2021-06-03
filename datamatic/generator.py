@@ -1,4 +1,5 @@
 import re
+import pathlib
 from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
@@ -63,9 +64,9 @@ def flag_filter(objects, flags):
             yield obj
 
 
-def process_block(spec, block, flags, context):
+def process_block(block, flags, context):
     out = ""
-    for comp in flag_filter(spec["components"], flags):
+    for comp in flag_filter(context.spec["components"], flags):
         for line in block:
             while "{{Comp::" in line:
                 line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
@@ -105,7 +106,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src, context):
+def run(src, context):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:
@@ -120,7 +121,7 @@ def run(spec, src, context):
 
         if in_block:
             if line.startswith("DATAMATIC_END"):
-                out += process_block(spec, block, flags, context)
+                out += process_block(block, flags, context)
                 in_block = False
                 block = []
                 flags = set()

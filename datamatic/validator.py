@@ -87,22 +87,22 @@ def validate_component(comp, flags, plugin_list):
         validate_attribute(attr, flags, plugin_list)
 
 
-def run(spec, context):
+def run(context):
     """
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
     """
-    assert set(spec.keys()) == {"flags", "components"}
+    assert set(context.spec.keys()) == {"flags", "components"}
 
-    assert isinstance(spec["flags"], list)
-    assert isinstance(spec["components"], list)
+    assert isinstance(context.spec["flags"], list)
+    assert isinstance(context.spec["components"], list)
 
-    for flag in spec["flags"]:
+    for flag in context.spec["flags"]:
         validate_flag(flag)
 
-    flags = {flag["name"] for flag in spec["flags"]}
+    flags = {flag["name"] for flag in context.spec["flags"]}
 
-    for comp in spec["components"]:
+    for comp in context.spec["components"]:
         validate_component(comp, flags, context)
 
     print("Schema Valid!")

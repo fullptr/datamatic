@@ -101,4 +101,4 @@ def test_process_block():
     ctx = context.Context(spec)
     builtin.main(ctx)
 
-    assert generator.process_block(spec, lines, {}, ctx) == "first -> 1st\nsecond -> 2nd\n"
+    assert generator.process_block(lines, {}, ctx) == "first -> 1st\nsecond -> 2nd\n"
