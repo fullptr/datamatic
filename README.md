@@ -77,21 +77,22 @@ For a full description of what a valid schema is, see [Validator.py](Datamatic/V
 ```cpp
 #include <glm/glm.hpp>
 
-#ifdef DATAMATIC_BLOCK
+DATAMATIC_BEGIN
 struct {{Comp::name}}
 {
     {{Attr::type}} {{Attr::name}} = {{Attr::default}};
 };
 
-#endif
+DATAMATIC_END
 ```
 Notice a few things
-* A block of template code uses C++'s `#ifdef` and `#endif` macros with `DATAMATIC_BLOCK` as the symbol. This symbol should not be defined; the only reason I use this rather than custom syntax is so that C++ syntax highlighting can still work on the template files without raising errors. Since the `DATAMATIC_BLOCK` symbol is not defined, the template code is ignored by the syntax highlighter (at least in VS Code).
+* A block of template of code is defined by being between lines containing `DATAMATIC_BEGIN` and `DATAMATIC_END`.
 * Replacement tokens are of the form `{{Namespace::function_name(args)}}`. If a function takes no arguments, the parentheses may be omitted. All of these functions return strings to insert into the output file.
 * The block is copied for each of the components in the spec, and functions in the `Comp` namespace are called with the current component implicitly passed in. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 * The only valid namespaces are `Comp` and `Attr`.
 * `name`, `display_name` and `default` are examples of builtin functions.
 * `name` and `display_name` simply return the value found in the component spec. `default` is a bit more complex as it needs to parse the json object in the spec into a string of C++ code. More on this later.
+* A file can have multiple template blocks.
 
 Running datamatic is very simple:
 ```bash
@@ -147,9 +148,9 @@ You may have noticed in the spec file above that it contained a `flags` top leve
 ```
 If a flag is not specified for a component or attribute, the default value is used. Then the serialisation code template may look like
 ```cpp
-#ifdef DATAMATIC_BLOCK SERIALISABLE=true
+DATAMATIC_BEGIN SERIALISABLE=true
     // Serialisation code here
-#endif
+DATAMATIC_END
 ```
 Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
 
@@ -315,13 +316,13 @@ There are a few important things here:
 
 The above function can then be referenced in templates:
 ```cpp
-#ifdef DATAMATIC_BLOCK
+DATAMATIC_BEGIN
 std::string {{Comp::name}}Upper()
 {
     return "{{Comp::format.upper}}";
 }
 
-#endif
+DATAMATIC_END
 ```
 This would generate
 ```cpp
@@ -339,6 +340,7 @@ std::string TransformComponentUpper()
 {
     return "TRANSFORMCOMPONENT";
 }
+
 ```
 ### Builtin Functions
 As we have seen already, `{{Comp::name}}` calls the function `name` in the `Comp` namespace. This is an example of a builtin function. Builtin functions are exactly the same as custom functions, datamatic just explicitly calls `builtin.main(ctx)` before searching for user code, and it uses the exact same API. The implmentation is exactly what you might expect:
@@ -356,9 +358,9 @@ You can find all of the builtin functions and type [here](datamatic/builtin.py).
 We briefly mentioned earlier that replacement tokens can accept arguments. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp::if_not_last` function:
 ```cpp
 using ECS = TemplatedECS<
-#ifdef DATAMATIC_BLOCK
+DATAMATIC_BEGIN
     {{Comp::name}}{{Comp::if_not_last(,)}}
-#endif
+DATAMATIC_END
 >;
 ```
 The `Comp::if_not_last` takes one argument, and if the component is not the last component in the spec, the function resolves to the argument, otherwise it resolves to an empty string. The above example would produce:
@@ -437,6 +439,6 @@ With the ability to generate template code using the full power of python, it sh
 * Have a nicer syntax for plugin function parameters. I would like to make the arguments comma separated and allow "," to be an argument as well. For this I will add a more sophisticated parser, but I haven't done it yet. After doing this, `Comp::if_not_last(,)` would become `Comp::if_not_last(",")` which is more akin to what people should expect.
 * Extend the builtin plugin to provide more useful functionality.
 * Support for more C++ standard types.
-* Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic, but there are some C++ specific things. These things include the `#ifdef DATAMATIC_BLOCK` and the `Type` API. The reason I can use this for Lua is because you don't explicitly mention types so the `Type` API isn't a problem, and I don't make use of intellisense for Lua so the invalid syntax doesn't produce errors.
+* Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic. The exception is the type parser code. I have some ideas for this but just haven't gotten around to doing it yet.
 * I've considered having inline python code in the templates akin to using `eval`, which is often seen as dangerous, but we are already executing arbitrary code via the `dmx` system, so maybe it's no worse. I'm also considering going the other way and removing the discovery system and making users have to specify the extension files on the command line instead, but I haven't reached a conclusion here.
 * A unit testing suite and some integration tests that can be run to show off the generator.

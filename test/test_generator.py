@@ -1,4 +1,4 @@
-from datamatic import generator
+from datamatic import generator, context, builtin
 from datamatic.generator import Token
 import pytest
 from pathlib import Path
@@ -22,6 +22,10 @@ from pathlib import Path
 ])
 def test_parse_token_string_success(raw, token):
     assert token == generator.parse_token_string(raw)
+
+
+def test_empty_parentheses_is_valid():
+    assert generator.parse_token_string("Comp::foo()") == Token("Comp", "foo", tuple())
 
 
 @pytest.mark.parametrize("raw", [
@@ -63,3 +67,38 @@ def test_get_header():
     assert generator.get_header(Path("file.cpp")) == "// GENERATED FILE\n"
     assert generator.get_header(Path("file.lua")) == "-- GENERATED FILE\n"
 
+
+def test_parse_flags_good():
+    flags = ["a=true", "b=true", "c=false"]
+    assert generator.parse_flags(flags) == {"a": True, "b": True, "c": False}
+
+
+def test_parse_flags_bad():
+    flags = ["a=3", "b=2"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
+
+    flags = ["a=3", "b=true=false"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
+
+    flags = ["a=3", "true"]
+    with pytest.raises(Exception):
+        generator.parse_flags(flags)
+
+
+def test_process_block():
+    lines = [
+        r"{{Comp::name}} -> {{Comp::display_name}}"
+    ]
+    spec = {
+        "flags": [],
+        "components": [
+            {"name": "first", "display_name": "1st", "attributes": []},
+            {"name": "second", "display_name": "2nd", "attributes": []}
+        ]
+    }
+    ctx = context.Context(spec)
+    builtin.main(ctx)
+
+    assert generator.process_block(spec, lines, {}, ctx) == "first -> 1st\nsecond -> 2nd\n"
