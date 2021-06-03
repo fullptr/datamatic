@@ -4,6 +4,14 @@ The Builtin plugin which contains "attribute access" and some helpful functions.
 from contextlib import suppress
 from . import context
 
+
+def error_type(typename, obj, expected_type):
+    return RuntimeError(f"{obj} is not parsable as '{typename}': Wrong type - expected one of '{expected_type}'")
+
+def error_length(typename, obj, expected_size, actual_size):
+    return RuntimeError(f"{obj} is not parsable as '{typename}': Incorrect number of elements for {typename}, got {actual_size}, expected {expected_size}")
+
+
 def main(ctx: context.Context):
 
     @ctx.compmethod("name")
@@ -49,31 +57,36 @@ def main(ctx: context.Context):
 
     @ctx.type("int")
     def _(typename, obj) -> str:
-        assert isinstance(obj, int)
+        if not isinstance(obj, int):
+            raise error_type(typename, obj, int)
         return str(obj)
 
     @ctx.type("float")
     def _(typename, obj) -> str:
-        assert isinstance(obj, (int, float))
+        if not isinstance(obj, (int, float)):
+            raise error_type(typename, obj, (int, float))
         if "." not in str(obj):
             return f"{obj}.0f"
         return f"{obj}f"
 
     @ctx.type("double")
     def _(typename, obj) -> str:
-        assert isinstance(obj, (int, float))
+        if not isinstance(obj, (int, float)):
+            raise error_type(typename, obj, (int, float))
         if "." not in str(obj):
             return f"{obj}.0"
         return f"{obj}"
 
     @ctx.type("bool")
     def _(typename, obj) -> str:
-        assert isinstance(obj, bool)
+        if not isinstance(obj, bool):
+            raise error_type(typename, obj, bool)
         return "true" if obj else "false"
 
     @ctx.type("std::string")
     def _(typename, obj) -> str:
-        assert isinstance(obj, str)
+        if not isinstance(obj, str):
+            raise error_type(typename, obj, str)
         return f'"{obj}"'
 
     @ctx.type("std::vector<{}>")
@@ -87,22 +100,28 @@ def main(ctx: context.Context):
     @ctx.type("std::multiset<{}>")
     @ctx.type("std::unordered_multiset<{}>")
     def _(typename, subtype, obj) -> str:
-        assert isinstance(obj, list)
+        if not isinstance(obj, list):
+            raise error_type(typename, obj, list)
         rep = ", ".join(ctx.types.parse(subtype, x) for x in obj)
         return f"{typename}{{{rep}}}"
 
     @ctx.type("std::array<{}, {}>")
     def _(typename, subtype, size, obj) -> str:
-        assert size.isdigit(), f"Second parameter to std::array must be an integer, got '{size}'"
-        assert isinstance(obj, list), f"std::array expects a list of elements, got '{obj}'"
-        assert len(obj) == int(size), f"Incorrect number of elements for std::array, got {len(obj)}, expected {size}"
+        if not isinstance(obj, list):
+            raise error_type(typename, obj, list)
+        if not size.isdigit():
+            raise RuntimeError(f"Second parameter to std::array must be an integer, got '{size}'")
+        if len(obj) != int(size):
+            raise error_length(typename, obj, size, len(obj))
         rep = ", ".join(ctx.types.parse(subtype, x) for x in obj)
         return f"{typename}{{{rep}}}"
 
     @ctx.type("std::pair<{}, {}>")
     def _(typename, firsttype, secondtype, obj) -> str:
-        assert isinstance(obj, list)
-        assert len(obj) == 2
+        if not isinstance(obj, list):
+            raise error_type(typename, obj, list)
+        if len(obj) != 2:
+            raise error_length(typename, obj, 2, len(obj))
         firstraw, secondraw = obj
         first = ctx.types.parse(firsttype, firstraw)
         second = ctx.types.parse(secondtype, secondraw)
@@ -118,7 +137,7 @@ def main(ctx: context.Context):
         elif isinstance(obj, dict):
             pairs = obj.items()
         else:
-            raise RuntimeError(f"Could not parse {obj} as {typename}")
+            raise error_type(typename, obj, (list, dict))
 
         rep = ", ".join(f"{{{ctx.types.parse(keytype, k)}, {ctx.types.parse(valuetype, v)}}}" for k, v in pairs)
         return f"{typename}{{{rep}}}"
@@ -151,8 +170,10 @@ def main(ctx: context.Context):
 
     @ctx.type("std::tuple<{}...>")
     def _(typename, subtypes, obj) -> str:
-        assert isinstance(obj, list)
-        assert len(subtypes) == len(obj)
+        if not isinstance(obj, list):
+            raise error_type(typename, obj, list)
+        if len(obj) != len(subtypes):
+            raise error_length(typename, obj, len(subtypes), len(obj))
         rep = ", ".join(ctx.types.parse(subtype, val) for subtype, val in zip(subtypes, obj))
         return f"{typename}{{{rep}}}"
 
@@ -161,9 +182,10 @@ def main(ctx: context.Context):
         for subtype in subtypes:
             with suppress(Exception):
                 return ctx.types.parse(subtype, obj)
-        raise RuntimeError(f"{obj} cannot be parsed into any of {subtypes}")
+        raise error_type(typename, obj, list)
 
     @ctx.type("std::function<{}({})>")
     def _(typename, returntype, argtype, obj) -> str:
-        assert isinstance(obj, str) # We cannot parse a lambda, so just assume the given value is good
+        if not isinstance(obj, str):
+            raise error_type(typename, obj, str) # We cannot parse a lambda, so just assume the given value is good
         return obj

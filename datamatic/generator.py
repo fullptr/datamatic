@@ -91,7 +91,9 @@ def get_header(dst):
 
 
 def parse_flag_val(val):
-    assert val in {"true", "false"}
+    valid_vals = {"true", "false"}
+    if val not in valid_vals:
+        raise RuntimeError(f"Invalid flag value: {val}, must be one of {valid_vals}")
     return True if val == "true" else False
 
 
@@ -99,7 +101,8 @@ def parse_flags(flags):
     parsed_flags = {}
     for flag in flags:
         flag = flag.split("=")
-        assert len(flag) == 2
+        if len(flag) != 2:
+            raise RuntimeError(f"In correct number of tokens in flag {flag}, must have exactly one '='")
         name = flag[0]
         val = parse_flag_val(flag[1])
         parsed_flags[name] = val
@@ -128,7 +131,8 @@ def run(src, context):
             else:
                 block.append(line)
         elif line.startswith("DATAMATIC_BEGIN"):
-            assert not in_block
+            if in_block:
+                raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")
             in_block = True
             flags = parse_flags(set(line.split()[1:]))
         else:
