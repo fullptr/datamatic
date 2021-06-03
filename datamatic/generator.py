@@ -106,7 +106,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(spec, src, context):
+def run(src, context):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:

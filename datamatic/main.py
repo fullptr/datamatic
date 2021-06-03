@@ -67,9 +67,9 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     builtin.main(ctx)
     discover(directory, ctx)
 
-    validator.run(spec, ctx)
+    validator.run(ctx)
 
     for file in directory.glob("**/*.dm.*"):
-        generator.run(spec, file, ctx)
+        generator.run(file, ctx)
 
     print("Done!")
