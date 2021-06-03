@@ -1,0 +1,52 @@
+{
+    "flags": [
+        {
+            "name": "SCRIPTABLE",
+            "default": true
+        },
+        {
+            "name": "SAVABLE",
+            "default": true
+        }
+    ],
+    "components": [
+        {
+            "name": "TemporaryComponent",
+            "display_name": "Temporary",
+            "flags": {
+                "SCRIPTABLE": false
+            },
+            "attributes": []
+        },
+        {
+            "name": "NameComponent",
+            "display_name": "Name",
+            "attributes": [
+                {
+                    "name": "name",
+                    "display_name": "Name",
+                    "type": "std::string",
+                    "default": "Entity"
+                }
+            ]
+        },
+        {
+            "name": "PointComponent",
+            "display_name": "Point",
+            "attributes": [
+                {
+                    "name": "x",
+                    "display_name": "X-Coord",
+                    "type": "float",
+                    "default": 0
+                },
+                {
+                    "name": "y",
+                    "display_name": "Y-Coord",
+                    "type": "float",
+                    "default": 0
+                }
+            ]
+        }
+    ]
+}

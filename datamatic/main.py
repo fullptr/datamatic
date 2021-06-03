@@ -55,21 +55,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
+def main(specfile: pathlib.Path, directory: pathlib.Path):
     """
     Entry point.
     """
-    with args.spec.open() as specfile:
-        spec = json.loads(specfile.read())
+    with specfile.open() as specfile_handle:
+        spec = json.load(specfile_handle)
         fill_flag_defaults(spec)
 
     ctx = context.Context(spec)
     builtin.main(ctx)
-    discover(args.dir, ctx)
+    discover(directory, ctx)
 
     validator.run(spec, ctx)
 
-    for file in args.dir.glob("**/*.dm.*"):
+    for file in directory.glob("**/*.dm.*"):
         generator.run(spec, file, ctx)
 
     print("Done!")

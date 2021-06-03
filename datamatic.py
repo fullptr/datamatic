@@ -5,4 +5,4 @@ from datamatic import main
 
 if __name__ == "__main__":
     args = main.parse_args()
-    main.main(args)
+    main.main(args.spec, args.dir)
