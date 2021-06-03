@@ -64,9 +64,9 @@ def flag_filter(objects, flags):
             yield obj
 
 
-def process_block(spec, block, flags, context):
+def process_block(block, flags, context):
     out = ""
-    for comp in flag_filter(spec["components"], flags):
+    for comp in flag_filter(context.spec["components"], flags):
         for line in block:
             while "{{Comp::" in line:
                 line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
@@ -121,7 +121,7 @@ def run(spec, src, context):
 
         if in_block:
             if line.startswith("DATAMATIC_END"):
-                out += process_block(spec, block, flags, context)
+                out += process_block(block, flags, context)
                 in_block = False
                 block = []
                 flags = set()
