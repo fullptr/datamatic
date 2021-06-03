@@ -32,6 +32,9 @@ def test_end_to_end():
     shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
     assert op.exists(op.join(out_dir, "actual.dm.cpp"))
 
+    shutil.copy(op.join(src_dir, "custom_types.dmx.py"), op.join(out_dir, "custom_types.dmx.py"))
+    assert op.exists(op.join(out_dir, "custom_types.dmx.py"))
+
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
     main.main(specfile, pathlib.Path(out_dir))

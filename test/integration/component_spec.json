@@ -45,6 +45,12 @@
                     "display_name": "Y-Coord",
                     "type": "float",
                     "default": 0
+                },
+                {
+                    "name": "category",
+                    "display_name": "Category",
+                    "type": "custom_type",
+                    "default": 4
                 }
             ]
         }

@@ -19,6 +19,7 @@ struct PointComponent
 {
     float x = 0.0f;
     float y = 0.0f;
+    custom_type category = custom_type{4};
 };
 
 
