@@ -1,12 +1,12 @@
 {
     "flags": [
         {
-            "name": "SCRIPTABLE",
+            "name": "FLAG_A",
             "default": true
         },
         {
-            "name": "SAVABLE",
-            "default": true
+            "name": "FLAG_B",
+            "default": false
         }
     ],
     "components": [
@@ -14,7 +14,7 @@
             "name": "TemporaryComponent",
             "display_name": "Temporary",
             "flags": {
-                "SCRIPTABLE": false
+                "FLAG_A": false
             },
             "attributes": []
         },
