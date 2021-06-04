@@ -74,13 +74,13 @@ def test_validate_flags_in_spec():
     with pytest.raises(InvalidSpecError):
         validator.validate_flags_in_spec({"name": "foo", "default": True, "a": None})
 
-    # key must be a string
+    # "name" must be a str
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({1: True})
+        validator.validate_flags_in_spec({"name": True, "default": False})
 
-    # value must be a bool
+    # "default" must be a bool
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({"name": 1})
+        validator.validate_flags_in_spec({"name": "flag", "default": "False"})
 
 
 def test_validate_component_missing_required_key(ctx):
@@ -103,17 +103,17 @@ def test_validate_component_unknown_keys(ctx):
 
 
 def test_validate_component_types(ctx):
-    attr = { "name": None, "display_name": "Display", "attributes": [] }
+    comp = { "name": None, "display_name": "Display", "attributes": [] }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_component(comp, [], ctx)
 
-    attr = { "name": "Name", "display_name": None, "attributes": [] }
+    comp = { "name": "Name", "display_name": None, "attributes": [] }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_component(comp, [], ctx)
 
-    attr = { "name": "Name", "display_name": "Display", "attributes": None }
+    comp = { "name": "Name", "display_name": "Display", "attributes": None }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_component(comp, [], ctx)
 
 
 def test_validator_run(ctx):
