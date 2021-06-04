@@ -78,11 +78,11 @@ def test_parse_flags_bad():
     with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
-    flags = ["a=3", "b=true=false"]
+    flags = ["a=true", "b=true=false"]
     with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
-    flags = ["a=3", "true"]
+    flags = ["a=false", "true"]
     with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
