@@ -2,6 +2,7 @@
 Validates a given schema to make sure it is well-formed. This should
 also serve as documentation for what makes a valid schema.
 """
+from typing import Dict, Set
 
 
 class InvalidSpecError(RuntimeError):
@@ -48,36 +49,46 @@ FLAG_KEYS = {
 }
 
 
+def validate_flags_on_object(obj, flags):
+    """
+    Given an object, verify that it is a (str -> bool) dict.
+    """
+    if not isinstance(obj, dict):
+        raise InvalidSpecError(f"{obj=} must be a {dict}, got {type(obj)}")
+    for key, val in obj.items():
+        if key not in flags:
+            raise InvalidSpecError(f"{key} is not a valid flag")
+        if not isinstance(key, str):
+            raise InvalidSpecError(f"{key=} must be a {str}, got {type(key)}")
+        if not isinstance(val, bool):
+            raise InvalidSpecError(f"{val=} must be a {bool}, got {type(key)}")
+
+
 def validate_attribute(attr, flags, context):
     """
     Asserts that the given attribute is well-formed.
     """
-    if set(attr.keys()) < ATTR_KEYS_REQ:
+    if not ATTR_KEYS_REQ <= set(attr.keys()):
         raise InvalidSpecError(f"Missing keys for {attr}: {ATTR_KEYS_REQ - set(attr.keys())}")
-    if ATTR_KEYS_REQ | ATTR_KEYS_OPT < set(attr.keys()):
-        raise InvalidSpecError(f"Unrecognised keys for {attr}: {set(attr.keys()) - ATTR_KEYS_REQ | ATTR_KEYS_OPT}")
+    if not set(attr.keys()) <= ATTR_KEYS_REQ | ATTR_KEYS_OPT:
+        raise InvalidSpecError(f"Unrecognised keys for {attr}: {set(attr.keys()) - ATTR_KEYS_REQ - ATTR_KEYS_OPT}")
 
     if not isinstance(attr["name"], str):
         raise InvalidSpecError(f"{attr['name']=} must be a {str}, got {type(attr['name'])}")
     if not isinstance(attr["display_name"], str):
         raise InvalidSpecError(f"{attr['display_name']=} must be a {str}, got {type(attr['display_name'])}")
+    if not isinstance(attr["type"], str):
+        raise InvalidSpecError(f"{attr['type']=} must be a {str}, got {type(attr['type'])}")
 
     # Verify that accessing the default value succeeds.
     context.get("Attr", "default")(attr)
 
+    # Verify that the flags attribute on the object, if it is exists, is correct
     if "flags" in attr:
-        if not isinstance(attr["flags"], dict):
-            raise InvalidSpecError(f"{attr['flags']=} must be a {dict}, got {type(attr['display_name'])}")
-        for key, val in attr["flags"].items():
-            if key not in flags:
-                raise InvalidSpecError(f"{key} is not a valid flag")
-            if not isinstance(key, str):
-                raise InvalidSpecError(f"{key=} must be a {str}, got {type(key)}")
-            if not isinstance(val, bool):
-                raise InvalidSpecError(f"{val=} must be a {bool}, got {type(key)}")
+        validate_flags_on_object(attr["flags"], flags)
 
 
-def validate_flag(flag):
+def validate_flags_in_spec(flag):
     """
     Asserts that the given flag is well-formed.
     """
@@ -89,13 +100,13 @@ def validate_flag(flag):
         raise InvalidSpecError(f"{flag['default']=} must be a {bool}, got {type(flag['default'])}")
 
 
-def validate_component(comp, flags, plugin_list):
+def validate_component(comp, flags, context):
     """
     Asserts that the given component is well-formed.
     """
-    if set(comp.keys()) < COMP_KEYS_REQ:
+    if not COMP_KEYS_REQ <= set(comp.keys()):
         raise InvalidSpecError(f"Missing keys for {comp}: {COMP_KEYS_REQ - set(comp.keys())}")
-    if COMP_KEYS_REQ | COMP_KEYS_OPT < set(comp.keys()):
+    if not set(comp.keys()) <= COMP_KEYS_REQ | COMP_KEYS_OPT:
         raise InvalidSpecError(f"Unrecognised keys for {comp}: {set(comp.keys()) - COMP_KEYS_REQ | COMP_KEYS_OPT}")
 
     if not isinstance(comp["name"], str):
@@ -105,19 +116,12 @@ def validate_component(comp, flags, plugin_list):
     if not isinstance(comp["attributes"], list):
         raise InvalidSpecError(f"{comp['attributes']=} must be a {list}, got {type(comp['attributes'])}")
 
+    # Verify that the flags attribute on the object, if it is exists, is correct
     if "flags" in comp:
-        if not isinstance(comp["flags"], dict):
-            raise InvalidSpecError(f"{comp['flags']=} must be a {dict}, got {type(comp['display_name'])}")
-        for key, val in comp["flags"].items():
-            if key not in flags:
-                raise InvalidSpecError(f"{key} is not a valid flag")
-            if not isinstance(key, str):
-                raise InvalidSpecError(f"{key=} must be a {str}, got {type(key)}")
-            if not isinstance(val, bool):
-                raise InvalidSpecError(f"{val=} must be a {bool}, got {type(key)}")
+        validate_flags_on_object(comp["flags"], flags)
 
     for attr in comp["attributes"]:
-        validate_attribute(attr, flags, plugin_list)
+        validate_attribute(attr, flags, context)
 
 
 def run(context):
@@ -132,12 +136,12 @@ def run(context):
     if not isinstance(spec_flags, list):
         raise InvalidSpecError(f"{spec_flags=} must be a {list}, got {type(spec_flags)}")
 
-    spec_components = context.spec["flags"]
-    if not isinstance(spec_flags, list):
+    spec_components = context.spec["components"]
+    if not isinstance(spec_components, list):
         raise InvalidSpecError(f"{spec_components=} must be a {list}, got {type(spec_components)}")
 
     for flag in context.spec["flags"]:
-        validate_flag(flag)
+        validate_flags_in_spec(flag)
 
     flags = {flag["name"] for flag in context.spec["flags"]}
 
