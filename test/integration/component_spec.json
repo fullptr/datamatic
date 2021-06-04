@@ -26,7 +26,7 @@
                     "name": "name",
                     "display_name": "Name",
                     "type": "std::string",
-                    "default": "Entity"
+                    "default": "\"Entity\""
                 }
             ]
         },
@@ -38,19 +38,19 @@
                     "name": "x",
                     "display_name": "X-Coord",
                     "type": "float",
-                    "default": 0
+                    "default": "0.0f"
                 },
                 {
                     "name": "y",
                     "display_name": "Y-Coord",
                     "type": "float",
-                    "default": 0
+                    "default": "0.0f"
                 },
                 {
                     "name": "category",
                     "display_name": "Category",
                     "type": "custom_type",
-                    "default": 4
+                    "default": "custom_type{4}"
                 }
             ]
         }

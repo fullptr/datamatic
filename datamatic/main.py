@@ -1,12 +1,19 @@
 """
 Command line parser for datamatic.
 """
-import argparse
 import pathlib
 import json
 import importlib.util
 
 from . import validator, generator, context, builtin
+
+
+def load_spec(specfile: pathlib.Path):
+    with specfile.open() as specfile_handle:
+        spec = json.load(specfile_handle)
+    fill_flag_defaults(spec)
+    validator.run(spec)
+    return spec
 
 
 def discover(directory, ctx: context.Context):
@@ -32,15 +39,12 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     """
     Entry point.
     """
-    with specfile.open() as specfile_handle:
-        spec = json.load(specfile_handle)
-        fill_flag_defaults(spec)
+    spec = load_spec(specfile)
 
     ctx = context.Context(spec)
     builtin.main(ctx)
     discover(directory, ctx)
 
-    validator.run(ctx)
     for file in directory.glob("**/*.dm.*"):
         generator.run(file, ctx)
 

@@ -13,38 +13,40 @@ def ctx():
     return c
 
 
-def test_validate_attribute_missing_required_key(ctx):
-    attr = {}
-
+def test_validate_attribute_missing_required_key():
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_attribute({}, [])
 
 
-def test_validate_attribute_unknown_keys(ctx):
+def test_validate_attribute_unknown_keys():
     attr = {
         "name": "",
         "display_name": "",
         "type": "int",
-        "default": 0,
+        "default": "4",
         "extra": None
     }
 
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_attribute(attr, [])
 
 
-def test_validate_attribute_types(ctx):
-    attr = { "name": None, "display_name": "Display", "type": "int", "default": 0 }
+def test_validate_attribute_types():
+    attr = { "name": None, "display_name": "Display", "type": "int", "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_attribute(attr, [])
 
-    attr = { "name": "Name", "display_name": None, "type": "int", "default": 0 }
+    attr = { "name": "Name", "display_name": None, "type": "int", "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_attribute(attr, [])
 
-    attr = { "name": "Name", "display_name": "Display", "type": None, "default": 0 }
+    attr = { "name": "Name", "display_name": "Display", "type": None, "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [], ctx)
+        validator.validate_attribute(attr, [])
+
+    attr = { "name": "Name", "display_name": "Display", "type": "int", "default": None }
+    with pytest.raises(InvalidSpecError):
+        validator.validate_attribute(attr, [])
 
 
 def test_validate_flags_on_object():
@@ -83,14 +85,14 @@ def test_validate_flags_in_spec():
         validator.validate_flags_in_spec({"name": "flag", "default": "False"})
 
 
-def test_validate_component_missing_required_key(ctx):
+def test_validate_component_missing_required_key():
     comp = {}
 
     with pytest.raises(InvalidSpecError):
-        validator.validate_component(comp, [], ctx)
+        validator.validate_component(comp, [])
 
 
-def test_validate_component_unknown_keys(ctx):
+def test_validate_component_unknown_keys():
     comp = {
         "name": "",
         "display_name": "",
@@ -99,41 +101,42 @@ def test_validate_component_unknown_keys(ctx):
     }
 
     with pytest.raises(InvalidSpecError):
-        validator.validate_component(comp, [], ctx)
+        validator.validate_component(comp, [])
 
 
-def test_validate_component_types(ctx):
+def test_validate_component_types():
     comp = { "name": None, "display_name": "Display", "attributes": [] }
     with pytest.raises(InvalidSpecError):
-        validator.validate_component(comp, [], ctx)
+        validator.validate_component(comp, [])
 
     comp = { "name": "Name", "display_name": None, "attributes": [] }
     with pytest.raises(InvalidSpecError):
-        validator.validate_component(comp, [], ctx)
+        validator.validate_component(comp, [])
 
     comp = { "name": "Name", "display_name": "Display", "attributes": None }
     with pytest.raises(InvalidSpecError):
-        validator.validate_component(comp, [], ctx)
+        validator.validate_component(comp, [])
 
 
-def test_validator_run(ctx):
+def test_validator_run():
     # doesn't have the correct keys
+    spec = {}
     with pytest.raises(InvalidSpecError):
-        validator.run(ctx)
+        validator.run(spec)
 
     # has invalid extra keys
-    ctx.spec = {"flags": [], "components": [], "extra": []}
+    spec = {"flags": [], "components": [], "extra": []}
     with pytest.raises(InvalidSpecError):
-        validator.run(ctx)
+        validator.run(spec)
 
 
-def test_validator_flags_must_be_a_list(ctx):
-    ctx.spec = {"flags": None, "components": []}
+def test_validator_flags_must_be_a_list():
+    spec = {"flags": None, "components": []}
     with pytest.raises(InvalidSpecError):
-        validator.run(ctx)
+        validator.run(spec)
 
 
-def test_validator_components_must_be_a_list(ctx):
-    ctx.spec = {"flags": [], "components": None}
+def test_validator_components_must_be_a_list():
+    spec = {"flags": [], "components": None}
     with pytest.raises(InvalidSpecError):
-        validator.run(ctx)
+        validator.run(spec)

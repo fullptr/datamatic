@@ -33,9 +33,6 @@ def test_end_to_end():
     shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
     assert op.exists(op.join(out_dir, "actual.dm.cpp"))
 
-    shutil.copy(op.join(src_dir, "custom_types.dmx.py"), op.join(out_dir, "custom_types.dmx.py"))
-    assert op.exists(op.join(out_dir, "custom_types.dmx.py"))
-
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
     main.main(specfile, pathlib.Path(out_dir))
@@ -68,9 +65,6 @@ def test_file_is_not_rewritten_if_no_change():
     # Copy the template file into the output and verify it's there. Also copy the expected.
     shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
     assert op.exists(op.join(out_dir, "actual.dm.cpp"))
-
-    shutil.copy(op.join(src_dir, "custom_types.dmx.py"), op.join(out_dir, "custom_types.dmx.py"))
-    assert op.exists(op.join(out_dir, "custom_types.dmx.py"))
 
     shutil.copy(op.join(src_dir, "expected.cpp"), op.join(out_dir, "actual.cpp"))
     assert op.exists(op.join(out_dir, "actual.cpp"))
