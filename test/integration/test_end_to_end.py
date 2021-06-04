@@ -5,7 +5,7 @@ import tempfile
 import shutil
 import pathlib
 import os.path as op
-from unittest.mock import patch, call
+from unittest.mock import patch
 from datamatic import main
 
 

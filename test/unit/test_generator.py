@@ -36,7 +36,7 @@ def test_empty_parentheses_is_valid():
     "Comp::foo(a|b|)"
 ])
 def test_parse_token_string_failure(raw):
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         generator.parse_token_string(raw)
 
 
@@ -57,7 +57,7 @@ def test_parse_flag_value():
     assert generator.parse_flag_val("true") == True
     assert generator.parse_flag_val("false") == False
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         generator.parse_flag_val("a")
 
 
@@ -75,15 +75,15 @@ def test_parse_flags_good():
 
 def test_parse_flags_bad():
     flags = ["a=3", "b=2"]
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
-    flags = ["a=3", "b=true=false"]
-    with pytest.raises(Exception):
+    flags = ["a=true", "b=true=false"]
+    with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
-    flags = ["a=3", "true"]
-    with pytest.raises(Exception):
+    flags = ["a=false", "true"]
+    with pytest.raises(RuntimeError):
         generator.parse_flags(flags)
 
 

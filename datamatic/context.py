@@ -44,15 +44,19 @@ class TypeParser:
     def register(self, first, **kwargs):
         def decorator(func):
             if "{}..." in first:
-                assert first.count("{}") == 1, "Variadic and non-variadic mixing not supported"
+                if first.count("{}") != 1:
+                    raise RuntimeError("Variadic and non-variadic mixing not supported")
                 newfirst = first.replace("{}...", "{}")
-                assert newfirst not in self.variadic_dispatchers, f"'{newfirst}' already has a registered parser"
+                if newfirst in self.variadic_dispatchers:
+                    raise RuntimeError(f"'{newfirst}' already has a registered parser")
                 self.variadic_dispatchers[newfirst] = functools.partial(func, **kwargs)
             elif "{}" in first:
-                assert first not in self.template_dispatchers, f"'{first}' already has a registered parser"
+                if first in self.template_dispatchers:
+                    raise RuntimeError(f"'{first}' already has a registered parser")
                 self.template_dispatchers[first] = functools.partial(func, **kwargs)
             else:
-                assert first not in self.dispatchers, f"'{first}' already has a registered parser"
+                if first in self.dispatchers:
+                    raise RuntimeError(f"'{first}' already has a registered parser")
                 self.dispatchers[first] = functools.partial(func, **kwargs)
             return func
         return decorator
@@ -87,7 +91,8 @@ class Context:
 
     def method(self, namespace, function_name):
         def decorate(function):
-            assert namespace, function_name not in self.methods
+            if (namespace, function_name) in self.methods:
+                raise RuntimeError(f"An implementation already exists for {namespace}::{function_name}")
             self.methods[namespace, function_name] = function
             return function
         return decorate
