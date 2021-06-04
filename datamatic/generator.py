@@ -123,6 +123,8 @@ def run(src, context):
         line = line.rstrip()
 
         if in_block:
+            if line.startswith("DATAMATIC_BEGIN"):
+                raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")
             if line.startswith("DATAMATIC_END"):
                 out += process_block(block, flags, context)
                 in_block = False
@@ -131,8 +133,6 @@ def run(src, context):
             else:
                 block.append(line)
         elif line.startswith("DATAMATIC_BEGIN"):
-            if in_block:
-                raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")
             in_block = True
             flags = parse_flags(set(line.split()[1:]))
         else:
