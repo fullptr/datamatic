@@ -26,7 +26,6 @@ def discover(directory, method_register: context.MethodRegister):
 
 def fill_flag_defaults(spec):
     defaults = spec["flag_defaults"]
-
     for comp in spec["components"]:
         comp_flags = comp.get("flags", {})
         comp["flags"] = {**defaults, **comp_flags}
