@@ -12,7 +12,7 @@ class InvalidSpecError(RuntimeError):
 
 
 SCHEMA_KEYS = {
-    "flags",
+    "flag_defaults",
     "components"
 }
 
@@ -87,18 +87,6 @@ def validate_attribute(attr, flags):
         validate_flags_on_object(attr["flags"], flags)
 
 
-def validate_flags_in_spec(flag):
-    """
-    Asserts that the given flag is well-formed.
-    """
-    if set(flag.keys()) != FLAG_KEYS:
-        raise InvalidSpecError(f"Incorrect keys for flag declaration, got {set(flag.keys())}, needed {FLAG_KEYS}")
-    if not isinstance(flag["name"], str):
-        raise InvalidSpecError(f"{flag['name']=} must be a {str}, got {type(flag['name'])}")
-    if not isinstance(flag["default"], bool):
-        raise InvalidSpecError(f"{flag['default']=} must be a {bool}, got {type(flag['default'])}")
-
-
 def validate_component(comp, flags):
     """
     Asserts that the given component is well-formed.
@@ -131,18 +119,20 @@ def run(spec):
     if set(spec.keys()) != SCHEMA_KEYS:
         raise InvalidSpecError(f"Incorrect keys for flag declaration, got {set(spec.keys())}, needed {SCHEMA_KEYS}")
 
-    spec_flags = spec["flags"]
-    if not isinstance(spec_flags, list):
-        raise InvalidSpecError(f"{spec_flags=} must be a {list}, got {type(spec_flags)}")
+    spec_flags = spec["flag_defaults"]
+    if not isinstance(spec_flags, dict):
+        raise InvalidSpecError(f"{spec_flags=} must be a {dict}, got {type(spec_flags)}")
+    for flag, value in spec_flags.items():
+        if not isinstance(flag, str):
+            raise InvalidSpecError(f"{flag=} must be a {str}, got {type(flag)}")
+        if not isinstance(value, bool):
+            raise InvalidSpecError(f"{value=} must be a {bool}, got {type(value)}")
 
     spec_components = spec["components"]
     if not isinstance(spec_components, list):
         raise InvalidSpecError(f"{spec_components=} must be a {list}, got {type(spec_components)}")
 
-    for flag in spec["flags"]:
-        validate_flags_in_spec(flag)
-
-    flags = {flag["name"] for flag in spec["flags"]}
+    flags = set(spec_flags.keys())
 
     for comp in spec["components"]:
         validate_component(comp, flags)

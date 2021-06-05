@@ -1,14 +1,8 @@
 {
-    "flags": [
-        {
-            "name": "FLAG_A",
-            "default": true
-        },
-        {
-            "name": "FLAG_B",
-            "default": false
-        }
-    ],
+    "flag_defaults": {
+        "FLAG_A": true,
+        "FLAG_B": false
+    },
     "components": [
         {
             "name": "TemporaryComponent",

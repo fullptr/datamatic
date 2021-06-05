@@ -67,24 +67,6 @@ def test_validate_flags_on_object():
         validator.validate_flags_on_object({"foo": 1}, {"foo"})
 
 
-def test_validate_flags_in_spec():
-    # flag must have "name" and "default" as keys
-    with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({})
-
-    # flag must only have those keys
-    with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({"name": "foo", "default": True, "a": None})
-
-    # "name" must be a str
-    with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({"name": True, "default": False})
-
-    # "default" must be a bool
-    with pytest.raises(InvalidSpecError):
-        validator.validate_flags_in_spec({"name": "flag", "default": "False"})
-
-
 def test_validate_component_missing_required_key():
     comp = {}
 
@@ -125,18 +107,18 @@ def test_validator_run():
         validator.run(spec)
 
     # has invalid extra keys
-    spec = {"flags": [], "components": [], "extra": []}
+    spec = {"flags_defaults": {}, "components": [], "extra": []}
     with pytest.raises(InvalidSpecError):
         validator.run(spec)
 
 
 def test_validator_flags_must_be_a_list():
-    spec = {"flags": None, "components": []}
+    spec = {"flags_defaults": None, "components": []}
     with pytest.raises(InvalidSpecError):
         validator.run(spec)
 
 
 def test_validator_components_must_be_a_list():
-    spec = {"flags": [], "components": None}
+    spec = {"flags_defaults": {}, "components": None}
     with pytest.raises(InvalidSpecError):
         validator.run(spec)

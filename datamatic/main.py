@@ -25,7 +25,7 @@ def discover(directory, ctx: context.Context):
 
 
 def fill_flag_defaults(spec):
-    defaults = {flag["name"]: flag["default"] for flag in spec["flags"]}
+    defaults = spec["flag_defaults"]
 
     for comp in spec["components"]:
         comp_flags = comp.get("flags", {})
