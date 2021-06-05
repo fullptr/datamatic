@@ -16,12 +16,12 @@ def load_spec(specfile: pathlib.Path):
     return spec
 
 
-def discover(directory, ctx: context.Context):
+def discover(directory, method_register: context.MethodRegister):
     for file in directory.glob("**/*.dmx.py"):
         spec = importlib.util.spec_from_file_location(file.stem, file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        module.main(ctx)
+        module.main(method_register)
 
 
 def fill_flag_defaults(spec):
@@ -41,11 +41,11 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     """
     spec = load_spec(specfile)
 
-    ctx = context.Context(spec)
-    builtin.main(ctx)
-    discover(directory, ctx)
+    method_register = context.MethodRegister()
+    builtin.main(method_register)
+    discover(directory, method_register)
 
     for file in directory.glob("**/*.dm.*"):
-        generator.run(file, ctx)
+        generator.run(file, spec, method_register)
 
     print("Done!")

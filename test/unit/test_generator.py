@@ -98,7 +98,7 @@ def test_process_block():
             {"name": "second", "display_name": "2nd", "attributes": []}
         ]
     }
-    ctx = context.Context(spec)
-    builtin.main(ctx)
+    method_register = context.MethodRegister()
+    builtin.main(method_register)
 
-    assert generator.process_block(lines, {}, ctx) == "first -> 1st\nsecond -> 2nd\n"
+    assert generator.process_block(lines, {}, spec, method_register) == "first -> 1st\nsecond -> 2nd\n"

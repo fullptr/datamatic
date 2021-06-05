@@ -4,9 +4,9 @@ Users can implement plugins that hook up to tokens in dm files for
 custom behaviour.
 """
 
-class Context:
-    def __init__(self, spec):
-        self.spec = spec
+
+class MethodRegister:
+    def __init__(self):
         self.methods = {}
     
     def compmethod(self, function_name):
@@ -26,4 +26,10 @@ class Context:
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.methods:
             return self.methods[namespace, function_name]
-        raise RuntimeError(f"Could not find {namespace}.{function_name}")
+        return lambda _, obj: obj[function_name]
+
+
+class Context:
+    def __init__(self, spec, method_register):
+        self.spec = spec
+        self.method_register = method_register

@@ -5,13 +5,13 @@ from datamatic import context, builtin
 import pytest
 
 @pytest.fixture
-def ctx():
+def reg():
     """
-    Returns a context with the builtin dmx loaded.
+    Returns a method register with the builtin dmx loaded.
     """
-    ctx = context.Context({})
-    builtin.main(ctx)
-    return ctx
+    method_register = context.MethodRegister()
+    builtin.main(method_register)
+    return method_register
 
 
 @pytest.fixture
@@ -36,31 +36,35 @@ def attribute():
         "display_name": "Foo",
         "type": "int",
         "default": "5",
+        "custom_key": None
     }
 
 
-def test_builtin_accessors(ctx, component, attribute):
-    assert ctx.get("Comp", "name")(component) == "foo"
-    assert ctx.get("Attr", "name")(attribute) == "foo"
+@pytest.mark.parametrize("namespace", [
+    "Comp",
+    "Attr"
+])
+@pytest.mark.parametrize("key,value", [
+    ("name", "datamatic"),
+    ("display_name", "Datamatic"),
+    ("a", "abc"),
+    (1, 2)
+])
+def test_property_access(reg, namespace, key, value):
+    spec = {}  # Empty, as it wont be used here since we are just doing property lookup
+    obj = {key: value}
+    assert reg.get(namespace, key)(spec, obj) == value
 
-    assert ctx.get("Comp", "display_name")(component) == "Foo"
-    assert ctx.get("Attr", "display_name")(attribute) == "Foo"
 
-    assert ctx.get("Attr", "type")(attribute) == "int"
-    assert ctx.get("Attr", "default")(attribute) == "5"
-
-
-def test_builtin_conditionals(ctx, component):
-    # For these tests, there needs to be a spec in the context
-    ctx.spec = {
-        "flags": [],
+def test_builtin_conditionals(reg, component):
+    spec = {
         "components": [component]
     }
 
-    assert ctx.get("Comp", "if_nth_else")(component, "0", "a", "b") == "a"
-    assert ctx.get("Comp", "if_nth_else")(component, "1", "a", "b") == "b"
+    assert reg.get("Comp", "if_nth_else")(spec, component, "0", "a", "b") == "a"
+    assert reg.get("Comp", "if_nth_else")(spec, component, "1", "a", "b") == "b"
 
-    assert ctx.get("Comp", "if_first")(component, "a") == "a"
-    assert ctx.get("Comp", "if_not_first")(component, "a") == ""
-    assert ctx.get("Comp", "if_last")(component, "a") == "a"
-    assert ctx.get("Comp", "if_not_last")(component, "a") == ""
+    assert reg.get("Comp", "if_first")(spec, component, "a") == "a"
+    assert reg.get("Comp", "if_not_first")(spec, component, "a") == ""
+    assert reg.get("Comp", "if_last")(spec, component, "a") == "a"
+    assert reg.get("Comp", "if_not_last")(spec, component, "a") == ""

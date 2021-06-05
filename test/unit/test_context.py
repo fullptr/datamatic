@@ -3,29 +3,24 @@ import pytest
 
 
 @pytest.fixture
-def ctx():
-    return context.Context({})
+def reg():
+    return context.MethodRegister()
 
 
-def dummy(typename, obj):
+def dummy(spec, obj):
     return ""
 
 
-def test_custom_function_lookup_success(ctx):
-    ctx.attrmethod("test.func")(dummy)
-    assert ctx.get("Attr", "test.func") == dummy
+def test_custom_function_lookup_success(reg):
+    reg.attrmethod("test.func")(dummy)
+    assert reg.get("Attr", "test.func") == dummy
 
 
-def test_custom_function_lookup_failure(ctx):
+def test_context_cannot_register_a_custom_method_twice(reg):
+    reg.compmethod("foo")(dummy)
     with pytest.raises(RuntimeError):
-        ctx.get("Attr", "test.func")
+        reg.compmethod("foo")(dummy)
 
-
-def test_context_cannot_register_a_custom_method_twice(ctx):
-    ctx.compmethod("foo")(dummy)
+    reg.attrmethod("bar")(dummy)
     with pytest.raises(RuntimeError):
-        ctx.compmethod("foo")(dummy)
-
-    ctx.attrmethod("bar")(dummy)
-    with pytest.raises(RuntimeError):
-        ctx.attrmethod("bar")(dummy)
+        reg.attrmethod("bar")(dummy)
