@@ -13,7 +13,7 @@ from datamatic import main
 src_dir = op.dirname(op.abspath(__file__))
 
 
-def test_end_to_end():
+def test_end_to_end_simple():
     """
     Creates a temporary directory and copies the template file. Run datamatic on the directory
     and verify that a new file as been created with the same contents as the expected file.

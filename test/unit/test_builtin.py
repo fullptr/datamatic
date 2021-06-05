@@ -57,14 +57,10 @@ def test_property_access(reg, namespace, key, value):
 
 
 def test_builtin_conditionals(reg, component):
-    spec = {
-        "components": [component]
-    }
+    assert reg.get("Comp", "if_nth_else")([component], component, "0", "a", "b") == "a"
+    assert reg.get("Comp", "if_nth_else")([component], component, "1", "a", "b") == "b"
 
-    assert reg.get("Comp", "if_nth_else")(spec, component, "0", "a", "b") == "a"
-    assert reg.get("Comp", "if_nth_else")(spec, component, "1", "a", "b") == "b"
-
-    assert reg.get("Comp", "if_first")(spec, component, "a") == "a"
-    assert reg.get("Comp", "if_not_first")(spec, component, "a") == ""
-    assert reg.get("Comp", "if_last")(spec, component, "a") == "a"
-    assert reg.get("Comp", "if_not_last")(spec, component, "a") == ""
+    assert reg.get("Comp", "if_first")([component], component, "a") == "a"
+    assert reg.get("Comp", "if_not_first")([component], component, "a") == ""
+    assert reg.get("Comp", "if_last")([component], component, "a") == "a"
+    assert reg.get("Comp", "if_not_last")([component], component, "a") == ""

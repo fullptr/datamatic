@@ -27,6 +27,9 @@
         {
             "name": "PointComponent",
             "display_name": "Point",
+            "flags": {
+                "FLAG_B": true
+            },
             "attributes": [
                 {
                     "name": "x",

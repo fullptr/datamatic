@@ -9,7 +9,7 @@ def main(methods: context.MethodRegister):
     @methods.compmethod("if_nth_else")
     def if_nth_else(spec, comp, n, yes_token, no_token):
         try:
-            return yes_token if comp == spec["components"][int(n)] else no_token
+            return yes_token if comp == spec[int(n)] else no_token
         except IndexError:
             return no_token
 

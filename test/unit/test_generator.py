@@ -1,4 +1,4 @@
-from datamatic import generator, context, builtin
+from datamatic import generator, context, builtin, main
 from datamatic.generator import Token
 import pytest
 from pathlib import Path
@@ -40,17 +40,19 @@ def test_parse_token_string_failure(raw):
         generator.parse_token_string(raw)
 
 
-def test_flag_filtering():
-    obj1 = {"flags": {"flag1": True, "flag2": False}}
-    obj2 = {"flags": {"flag1": True, "flag2": True}}
-    obj3 = {"flags": {"flag1": False, "flag2": False}}
-    obj4 = {"flags": {"flag1": True, "flag2": True}}
-    objects = [obj1, obj2, obj3, obj4]
-
-    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": True})) == [obj2, obj4]
-    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": False})) == [obj1]
-    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": True})) == []
-    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": False})) == [obj3]
+# generator.flag_filter has been removed, but its core logic is still in use and will
+# need to be covered with tests later, so this will be useful.
+#def test_flag_filtering():
+#    obj1 = {"flags": {"flag1": True, "flag2": False}}
+#    obj2 = {"flags": {"flag1": True, "flag2": True}}
+#    obj3 = {"flags": {"flag1": False, "flag2": False}}
+#    obj4 = {"flags": {"flag1": True, "flag2": True}}
+#    objects = [obj1, obj2, obj3, obj4]
+#
+#    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": True})) == [obj2, obj4]
+#    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": False})) == [obj1]
+#    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": True})) == []
+#    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": False})) == [obj3]
 
 
 def test_parse_flag_value():
@@ -102,3 +104,103 @@ def test_process_block():
     builtin.main(method_register)
 
     assert generator.process_block(lines, {}, spec, method_register) == "first -> 1st\nsecond -> 2nd\n"
+
+
+def test_flag_application():
+    spec = {
+        "flag_defaults": {
+            "FLAG_A": True
+        },
+        "components": [
+            {
+                "name": "a",
+                "flags": {},
+                "attributes": [
+                    {
+                        "name": "attr_a",
+                        "flags": { "FLAG_A": False }
+                    },
+                    {
+                        "name": "attr_b"
+                    },
+                    {
+                        "name": "attr_c",
+                        "flags": { "FLAG_A": False }
+                    }
+                ]
+            },
+            {
+                "name": "b",
+                "flags": {},
+                "attributes": []
+            },
+            {
+                "name": "c",
+                "flags": { "FLAG_A": False },
+                "attributes": []
+            },
+        ]
+    }
+    main.fill_flag_defaults(spec)
+
+    flags = {
+        "FLAG_A": True
+    }
+
+    expected = [
+        {
+            "name": "a",
+            "attributes": [
+                { "name": "attr_b" }
+            ]
+        },
+        {
+            "name": "b",
+            "attributes": []
+        }
+    ]
+
+    assert generator.apply_flags_to_spec(spec, flags) == expected
+
+
+def test_empty_flag_application():
+    spec = {
+        "flag_defaults": {
+            "FLAG_A": True
+        },
+        "components": [
+            {
+                "name": "a",
+                "flags": {},
+                "attributes": []
+            },
+            {
+                "name": "b",
+                "flags": {},
+                "attributes": []
+            },
+            {
+                "name": "c",
+                "flags": { "FLAG_A": False },
+                "attributes": []
+            },
+        ]
+    }
+    main.fill_flag_defaults(spec)
+
+    expected = [
+        {
+            "name": "a",
+            "attributes": []
+        },
+        {
+            "name": "b",
+            "attributes": []
+        },
+        {
+            "name": "c",
+            "attributes": []
+        },
+    ]
+
+    assert generator.apply_flags_to_spec(spec, {}) == expected
