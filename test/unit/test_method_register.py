@@ -1,7 +1,7 @@
 """
 Test driver for the builtin comp and attr methods.
 """
-from datamatic import context, builtin
+from datamatic import method_register
 import pytest
 
 @pytest.fixture
@@ -9,9 +9,9 @@ def reg():
     """
     Returns a method register with the builtin dmx loaded.
     """
-    method_register = context.MethodRegister()
-    builtin.main(method_register)
-    return method_register
+    mreg = method_register.MethodRegister()
+    mreg.load_builtins()
+    return mreg
 
 
 @pytest.fixture
@@ -38,6 +38,25 @@ def attribute():
         "default": "5",
         "custom_key": None
     }
+
+
+def dummy(spec, obj):
+    return ""
+
+
+def test_custom_function_lookup_success(reg):
+    reg.attrmethod("test.func")(dummy)
+    assert reg.get("Attr", "test.func") == dummy
+
+
+def test_context_cannot_register_a_custom_method_twice(reg):
+    reg.compmethod("foo")(dummy)
+    with pytest.raises(RuntimeError):
+        reg.compmethod("foo")(dummy)
+
+    reg.attrmethod("bar")(dummy)
+    with pytest.raises(RuntimeError):
+        reg.attrmethod("bar")(dummy)
 
 
 @pytest.mark.parametrize("namespace", [

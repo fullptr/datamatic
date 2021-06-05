@@ -3,9 +3,8 @@ Command line parser for datamatic.
 """
 import pathlib
 import json
-import importlib.util
 
-from . import validator, generator, context, builtin
+from . import validator, generator, method_register
 
 
 def load_spec(specfile: pathlib.Path):
@@ -14,14 +13,6 @@ def load_spec(specfile: pathlib.Path):
     fill_flag_defaults(spec)
     validator.run(spec)
     return spec
-
-
-def discover(directory, method_register: context.MethodRegister):
-    for file in directory.glob("**/*.dmx.py"):
-        spec = importlib.util.spec_from_file_location(file.stem, file)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        module.main(method_register)
 
 
 def fill_flag_defaults(spec):
@@ -40,11 +31,11 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     """
     spec = load_spec(specfile)
 
-    method_register = context.MethodRegister()
-    builtin.main(method_register)
-    discover(directory, method_register)
+    reg = method_register.MethodRegister()
+    reg.load_builtins()
+    reg.load_from_dmx(directory)
 
     for file in directory.glob("**/*.dm.*"):
-        generator.run(file, spec, method_register)
+        generator.run(file, spec, reg)
 
     print("Done!")

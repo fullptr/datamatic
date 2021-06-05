@@ -1,16 +1,9 @@
 """
 Validator unit tests.
 """
-from datamatic import validator, context, builtin
+from datamatic import validator
 from datamatic.validator import InvalidSpecError
 import pytest
-
-
-@pytest.fixture
-def ctx():
-    c = context.Context({})
-    builtin.main(c)
-    return c
 
 
 def test_validate_attribute_missing_required_key():

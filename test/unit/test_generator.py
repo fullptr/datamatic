@@ -1,4 +1,4 @@
-from datamatic import generator, context, builtin, main
+from datamatic import generator, method_register, main
 from datamatic.generator import Token
 import pytest
 from pathlib import Path
@@ -100,10 +100,10 @@ def test_process_block():
             {"name": "second", "display_name": "2nd", "attributes": []}
         ]
     }
-    method_register = context.MethodRegister()
-    builtin.main(method_register)
+    reg = method_register.MethodRegister()
+    reg.load_builtins()
 
-    assert generator.process_block(lines, {}, spec, method_register) == "first -> 1st\nsecond -> 2nd\n"
+    assert generator.process_block(lines, {}, spec, reg) == "first -> 1st\nsecond -> 2nd\n"
 
 
 def test_flag_application():
