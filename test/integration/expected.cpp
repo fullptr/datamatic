@@ -29,5 +29,10 @@ std::vector<std::string> types_with_flag_a_true = {
     "PointComponent"
 };
 
+std::vector<std::string> types_with_flag_b_false = {
+    "foobar",
+    "foobar"
+};
+
 
 }

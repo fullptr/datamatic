@@ -1,14 +1,8 @@
 {
-    "flags": [
-        {
-            "name": "FLAG_A",
-            "default": true
-        },
-        {
-            "name": "FLAG_B",
-            "default": false
-        }
-    ],
+    "flag_defaults": {
+        "FLAG_A": true,
+        "FLAG_B": false
+    },
     "components": [
         {
             "name": "TemporaryComponent",
@@ -26,31 +20,34 @@
                     "name": "name",
                     "display_name": "Name",
                     "type": "std::string",
-                    "default": "Entity"
+                    "default": "\"Entity\""
                 }
             ]
         },
         {
             "name": "PointComponent",
             "display_name": "Point",
+            "flags": {
+                "FLAG_B": true
+            },
             "attributes": [
                 {
                     "name": "x",
                     "display_name": "X-Coord",
                     "type": "float",
-                    "default": 0
+                    "default": "0.0f"
                 },
                 {
                     "name": "y",
                     "display_name": "Y-Coord",
                     "type": "float",
-                    "default": 0
+                    "default": "0.0f"
                 },
                 {
                     "name": "category",
                     "display_name": "Category",
                     "type": "custom_type",
-                    "default": 4
+                    "default": "custom_type{4}"
                 }
             ]
         }

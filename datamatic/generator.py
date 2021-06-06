@@ -1,5 +1,4 @@
 import re
-import pathlib
 from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
@@ -46,36 +45,56 @@ def parse_token_string(raw_string: str) -> Token:
         args=args,
         raw_string=raw_string,
     )
+    
+
+def apply_flags_to_spec(spec, flags):
+    """
+    Returns a copy of the component list but with the given flags applied; any component or
+    attribute that doesn't match the given flags are omitted.
+    """
+    components = []
+    for comp in spec["components"]:
+        if all(comp['flags'][key] == value for key, value in flags.items()):
+            new_comp = {"attributes": []}
+            for key, value in comp.items():
+                if key in {"flags", "attributes"}:
+                    continue
+                new_comp[key] = value
+            for attr in comp["attributes"]:
+                if all(attr['flags'][key] == value for key, value in flags.items()):
+                    new_attr = {}
+                    for key, value in attr.items():
+                        if key in {"flags"}:
+                            continue
+                        new_attr[key] = value
+                    new_comp["attributes"].append(new_attr)
+            components.append(new_comp)
+    return components
 
 
-def replace_token(matchobj, obj, context):
+def replace_token(matchobj, obj, spec, method_register):
     """
     Parse the replacement token in the matchobj to figure out the namespace, function name
     and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
     token = parse_token_string(matchobj.group(1))
-    function = context.get(token.namespace, token.function_name)
-    return function(obj, *token.args)
+    function = method_register.get(token.namespace, token.function_name)
+    return function(spec, obj, *token.args)
 
 
-def flag_filter(objects, flags):
-    for obj in objects:
-        if all(obj['flags'][key] == value for key, value in flags.items()):
-            yield obj
-
-
-def process_block(block, flags, context):
+def process_block(block, flags, spec, method_register):
     out = ""
-    for comp in flag_filter(context.spec["components"], flags):
+    filtered_spec = apply_flags_to_spec(spec, flags)
+    for comp in filtered_spec:
         for line in block:
             while "{{Comp::" in line:
-                line = TOKEN.sub(partial(replace_token, obj=comp, context=context), line)
+                line = TOKEN.sub(partial(replace_token, obj=comp, spec=filtered_spec, method_register=method_register), line)
 
             if "{{Attr::" in line:
-                for attr in flag_filter(comp["attributes"], flags):
+                for attr in comp["attributes"]:
                     newline = line
                     while "{{Attr::" in newline:
-                        newline = TOKEN.sub(partial(replace_token, obj=attr, context=context), newline)
+                        newline = TOKEN.sub(partial(replace_token, obj=attr, spec=filtered_spec, method_register=method_register), newline)
 
                     out += newline + "\n"
             else:
@@ -109,7 +128,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(src, context):
+def run(src, spec, method_register):
     dst = src.parent / src.name.replace(".dm.", ".")
 
     with src.open() as srcfile:
@@ -126,7 +145,7 @@ def run(src, context):
             if line.startswith("DATAMATIC_BEGIN"):
                 raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")
             if line.startswith("DATAMATIC_END"):
-                out += process_block(block, flags, context)
+                out += process_block(block, flags, spec, method_register)
                 in_block = False
                 block = []
                 flags = set()

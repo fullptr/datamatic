@@ -23,9 +23,6 @@ def test_mismatched_datamatic_blocks():
     shutil.copy(op.join(src_dir, "invalid.dm.cpp"), op.join(out_dir, "invalid.dm.cpp"))
     assert op.exists(op.join(out_dir, "invalid.dm.cpp"))
 
-    shutil.copy(op.join(src_dir, "custom_types.dmx.py"), op.join(out_dir, "custom_types.dmx.py"))
-    assert op.exists(op.join(out_dir, "custom_types.dmx.py"))
-
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
 

@@ -1,25 +1,22 @@
 """
 Command line parser for datamatic.
 """
-import argparse
 import pathlib
 import json
-import importlib.util
 
-from . import validator, generator, context, builtin
+from . import validator, generator, method_register
 
 
-def discover(directory, ctx: context.Context):
-    for file in directory.glob("**/*.dmx.py"):
-        spec = importlib.util.spec_from_file_location(file.stem, file)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        module.main(ctx)
+def load_spec(specfile: pathlib.Path):
+    with specfile.open() as specfile_handle:
+        spec = json.load(specfile_handle)
+    fill_flag_defaults(spec)
+    validator.run(spec)
+    return spec
 
 
 def fill_flag_defaults(spec):
-    defaults = {flag["name"]: flag["default"] for flag in spec["flags"]}
-
+    defaults = spec["flag_defaults"]
     for comp in spec["components"]:
         comp_flags = comp.get("flags", {})
         comp["flags"] = {**defaults, **comp_flags}
@@ -32,16 +29,13 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     """
     Entry point.
     """
-    with specfile.open() as specfile_handle:
-        spec = json.load(specfile_handle)
-        fill_flag_defaults(spec)
+    spec = load_spec(specfile)
 
-    ctx = context.Context(spec)
-    builtin.main(ctx)
-    discover(directory, ctx)
+    reg = method_register.MethodRegister()
+    reg.load_builtins()
+    reg.load_from_dmx(directory)
 
-    validator.run(ctx)
     for file in directory.glob("**/*.dm.*"):
-        generator.run(file, ctx)
+        generator.run(file, spec, reg)
 
     print("Done!")
