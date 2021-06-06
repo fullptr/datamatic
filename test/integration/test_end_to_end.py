@@ -23,15 +23,15 @@ def test_end_to_end_simple():
     """
 
     # GIVEN
-    # The directory that this file is in. The template files are also located here.
-    src_dir = op.dirname(op.abspath(__file__))
-
     # Create a new directory to run the test in.
     out_dir = tempfile.mkdtemp(prefix="datamatic_")
     
     # Copy the template file into the output and verify it's there
     shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
     assert op.exists(op.join(out_dir, "actual.dm.cpp"))
+
+    shutil.copy(op.join(src_dir, "custom_functions.dmx.py"), op.join(out_dir, "custom_functions.dmx.py"))
+    assert op.exists(op.join(out_dir, "custom_functions.dmx.py"))
 
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
@@ -56,9 +56,6 @@ def test_file_is_not_rewritten_if_no_change():
     """
 
     # GIVEN
-    # The directory that this file is in. The template files are also located here.
-    src_dir = op.dirname(op.abspath(__file__))
-
     # Create a new directory to run the test in.
     out_dir = tempfile.mkdtemp(prefix="datamatic_")
     

@@ -3,6 +3,7 @@ Test driver for the builtin comp and attr methods.
 """
 from datamatic import method_register
 import pytest
+from unittest.mock import patch
 
 @pytest.fixture
 def reg():
