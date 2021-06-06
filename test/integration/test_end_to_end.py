@@ -3,7 +3,6 @@ An integration test that uses a specfile and a template file.
 """
 import shutil
 from pathlib import Path
-import os.path as op
 from unittest.mock import patch
 from datamatic import main
 import pytest
@@ -12,10 +11,10 @@ import pytest
 # The directory that this file is in. The template files are also located here.
 @pytest.fixture
 def src_path():
-    return Path(op.dirname(op.abspath(__file__)))
+    return Path(__file__).parent
 
 
-def copy_to_test(src_dir: Path, out_dir: Path, filename, new_filename=None):
+def copy_file(src_dir: Path, out_dir: Path, filename, new_filename=None):
     if new_filename is None:
         new_filename = filename
 
@@ -33,12 +32,10 @@ def test_end_to_end_simple(src_path, tmp_path):
 
     This end_to_end test should cover all datamatic features, such as flags, custom types and
     custom functions.
-    """    
-    # Copy the template file into the output and verify it's there
-    copy_to_test(src_path, tmp_path, "actual.dm.cpp")
-    copy_to_test(src_path, tmp_path, "custom_functions.dmx.py")
+    """
+    copy_file(src_path, tmp_path, "actual.dm.cpp")
+    copy_file(src_path, tmp_path, "custom_functions.dmx.py")
 
-    # WHEN
     specfile = src_path / "component_spec.json"
     main.main(specfile, tmp_path)
 
@@ -57,12 +54,10 @@ def test_file_is_not_rewritten_if_no_change(src_path, tmp_path):
     print and making sure the expected message was printed. This is a bit brittle, so maybe
     there's a better way of doing this.
     """
-    # Copy the template file into the output and verify it's there. Also copy the expected.
-    copy_to_test(src_path, tmp_path, "actual.dm.cpp")
-    copy_to_test(src_path, tmp_path, "custom_functions.dmx.py")
-    copy_to_test(src_path, tmp_path, "expected.cpp", "actual.cpp")
+    copy_file(src_path, tmp_path, "actual.dm.cpp")
+    copy_file(src_path, tmp_path, "custom_functions.dmx.py")
+    copy_file(src_path, tmp_path, "expected.cpp", "actual.cpp")
 
-    # WHEN
     specfile = src_path / "component_spec.json"
     with patch("builtins.print") as mock_print:
         main.main(specfile, tmp_path)
