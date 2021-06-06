@@ -6,9 +6,19 @@ from datamatic.validator import InvalidSpecError
 import pytest
 
 
+def test_spec_missing_required_keys():
+    spec = {"components": []}
+    with pytest.raises(InvalidSpecError):
+        validator.run(spec)
+
+    spec = {"flag_defaults": {}}
+    with pytest.raises(InvalidSpecError):
+        validator.run(spec)
+
+
 def test_validate_attribute_missing_required_key():
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute({}, [])
+        validator.validate_attribute({}, {})
 
 
 def test_validate_attribute_unknown_keys():
@@ -21,25 +31,25 @@ def test_validate_attribute_unknown_keys():
     }
 
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [])
+        validator.validate_attribute(attr, {})
 
 
 def test_validate_attribute_types():
     attr = { "name": None, "display_name": "Display", "type": "int", "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [])
+        validator.validate_attribute(attr, {})
 
     attr = { "name": "Name", "display_name": None, "type": "int", "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [])
+        validator.validate_attribute(attr, {})
 
     attr = { "name": "Name", "display_name": "Display", "type": None, "default": "0" }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [])
+        validator.validate_attribute(attr, {})
 
     attr = { "name": "Name", "display_name": "Display", "type": "int", "default": None }
     with pytest.raises(InvalidSpecError):
-        validator.validate_attribute(attr, [])
+        validator.validate_attribute(attr, {})
 
 
 def test_validate_flags_on_object():
