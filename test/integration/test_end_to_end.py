@@ -4,6 +4,7 @@ An integration test that uses a specfile and a template file.
 import shutil
 from pathlib import Path
 from unittest.mock import patch
+from typing import Optional
 from datamatic import main
 import pytest
 
@@ -14,7 +15,7 @@ def src_path():
     return Path(__file__).parent
 
 
-def copy_file(src_dir: Path, out_dir: Path, filename, new_filename=None):
+def copy_file(src_dir: Path, out_dir: Path, filename: str, new_filename: Optional[str] = None):
     if new_filename is None:
         new_filename = filename
 
@@ -43,7 +44,7 @@ def test_end_to_end_simple(src_path, tmp_path):
     actual_file = tmp_path / "actual.cpp"
     
     assert actual_file.exists()
-    with open(expected_file) as expected, open(actual_file) as actual:
+    with expected_file.open() as expected, actual_file.open() as actual:
         assert expected.read() == actual.read()
 
 
@@ -62,5 +63,4 @@ def test_file_is_not_rewritten_if_no_change(src_path, tmp_path):
     with patch("builtins.print") as mock_print:
         main.main(specfile, tmp_path)
 
-    # THEN
     mock_print.assert_any_call(f"No change to {tmp_path / 'actual.cpp'}")
