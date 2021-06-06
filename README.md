@@ -14,7 +14,7 @@ With this tool, components can be defined in a json file, and C++ and Lua source
 Firstly, you must create a component spec json file. As a basic example (flags, custom types and other features explained later):
 ```json
 {
-    "flags": [],
+    "flag_defaults": [],
     "components": [
         {
             "name": "NameComponent",
@@ -24,7 +24,7 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
                     "name": "name",
                     "display_name": "Name",
                     "type": "std::string",
-                    "default": "Entity"
+                    "default": "\"Entity\""
                 }
             ]
         },
@@ -36,13 +36,13 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
                     "name": "current_health",
                     "display_name": "Current Health",
                     "type": "float",
-                    "default": 100.0
+                    "default": "100.0f"
                 },
                 {
                     "name": "max_health",
                     "display_name": "Maximum Health",
                     "type": "float",
-                    "default": 100.0
+                    "default": "100.0f"
                 }
             ]
         },
@@ -54,19 +54,19 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
                     "name": "position",
                     "display_name": "Position",
                     "type": "glm::vec3",
-                    "default": [0.0, 0.0, 0.0]
+                    "default": "{0.0f, 0.0f, 0.0f}"
                 },
                 {
                     "name": "orientation",
                     "display_name": "Orientation",
                     "type": "glm::quat",
-                    "default": [0.0, 0.0, 0.0, 1.0]
+                    "default": "{0.0f, 0.0f, 0.0f, 1.0f}"
                 },
                 {
                     "name": "scale",
                     "display_name": "Scale",
                     "type": "glm::vec3",
-                    "default": [1.0, 1.0, 1.0]
+                    "default": "{1.0f, 1.0f, 1.0f}"
                 }
             ]
         }
@@ -88,10 +88,10 @@ DATAMATIC_END
 Notice a few things
 * A block of template of code is defined by being between lines containing `DATAMATIC_BEGIN` and `DATAMATIC_END`.
 * Replacement tokens are of the form `{{Namespace::function_name(args)}}`. If a function takes no arguments, the parentheses may be omitted. All of these functions return strings to insert into the output file.
+* As seen above, if you instead specify the name of a property, that is returned (provided there is no function with the same name). Specifically, if no function with the given name is found, a default function is returned which simply does a property lookup on the given component/attribute.
 * The block is copied for each of the components in the spec, and functions in the `Comp` namespace are called with the current component implicitly passed in. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 * The only valid namespaces are `Comp` and `Attr`.
-* `name`, `display_name` and `default` are examples of builtin functions.
-* `name` and `display_name` simply return the value found in the component spec. `default` is a bit more complex as it needs to parse the json object in the spec into a string of C++ code. More on this later.
+* There is nothing special about `name`, `display_name` and `default` above, you can have any property on your components that you like. However, if you are making use of them directly like `{{Comp::name}}`, that property must obviously be provided for all components. It may be beneficial to have some properties that only appear on some components for the sake of custom functions, more on that below.
 * A file can have multiple template blocks.
 
 Running datamatic is very simple:
@@ -124,15 +124,12 @@ struct TransformComponent
 ```
 
 ## Flags
-You may have noticed in the spec file above that it contained a `flags` top level attribute. Flags provide a way to set boolean flags on components and attributes which can be used to ignore certain components/attributes in template blocks. For example, when saving a game, we may not want the health of entities to be saved (not a great example but it work to demonstrate the point). We can declare a flag called `SERIALISABLE` in the spec file in the following way
+You may have noticed in the spec file above that it contained a `flag_defaults` top level attribute. Flags provide a way to set boolean flags on components and attributes which can be used to ignore certain components/attributes in template blocks. For example, when saving a game, we may not want the health of entities to be saved (not a great example but it works to demonstrate the point). We can declare a flag called `SERIALISABLE` in the spec file in the following way
 ```json
 {
-    "flags": [
-        {
-            "name": "SERIALISABLE",
-            "default": true
-        }
-    ],
+    "flag_defaults": {
+        "SERIALISABLE": true
+    },
     "components": [
         {
             "name": "HealthComponent",
@@ -154,165 +151,28 @@ DATAMATIC_END
 ```
 Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
 
-## Custom Extensions
-By default, datamatic's runtime is quite basic, and you will most likely find yourself needing to extend it with code that is meaningful for your codebase. For instance
-* You may want your own custom types to be data members of your components
-* You may require more complex code to be generated that cannot be expressed in datamatic's simplistic syntax
+## Functions (More Detail)
+As mentioned earlier, replacement tokens in template files are of the form `{{Namespace::function_name(args)}}`, where the parentheses can be omitted if the function takes no arguements. By default, the only things available are some useful builtin functions as well as property lookup. As an example, suppose datamatic finds `{{Comp::name}}` when generating a file. The following happens:
 
-Most of the "business logic" is stored in a `Context` object, which is made available to users. Simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. These files should contain a `main` function that accepts one argument; this will be called with the context passed as that argument. The features of this object are described more below.
+* A function with the name `name` is looked up.
+* If there is no such function, it returns the property `"name"` from the current component.
+* If the current component has no `name` property, a `KeyError` will be raised and the generating will stop.
 
-## Types
-The default values in the component spec are stored as json objects themselves rather than as a simple string of C++ code. This is done so that datamatic can provide a level of type checking for the values. Datamatic has type checkers for most standard library types and primitive types. If you were to, say, try to have `null` or `5` be the default value for a `std::string`, datamatic would raise an exception. This makes datamatic code less error-prone, but has the tradeoff that it doesn't know how to handle custom types. To fix this, the `Context` object provides a method for registering your own custom types. This lets you define a parser function to convert a JSON representation of your type into a string of C++ code.
-
-Datamatic uses the function `ctx.parse(typename: str, json_object) -> str` for carrying out these conversions, and can be enhanced with the `ctx.types` decorator.
-
-An example of a `dmx` file that extends `ctx.parse` for `glm::vec3`:
-```py
-def main(ctx):
-
-    @ctx.type("glm::vec3")
-    def _(typename, obj) -> str:
-        # For this implementation, typename == "glm::vec3"
-        assert isinstance(obj, list)
-        assert len(obj) == 3
-        rep = ", ".join(ctx.parse("float", val) for val in obj)
-        return f"{typename}{{{rep}}}"
-```
-With this in your codebase, `ctx.parse("glm::vec3", obj)` would now be valid, only failing if the json object is not the correct form. Without this, the failure would be a `RuntimeError` saying that there was no parser for the specified type. Also note that this function delegates to the `float` parser for the vector elements.
-
-### Registering the same parser for different types
-Consider the implementations of `glm::vec4` and `glm::quat`. They are both essentially a vector of four elements, so they can both use the same parser:
-```py
-def main(ctx):
-
-    @ctx.type("glm::vec4")
-    @ctx.type("glm::quat")
-    def _(typename, obj) -> str:
-        assert isinstance(obj, list)
-        assert len(obj) == 4
-        rep = ", ".join(ctx.parse("float", val) for val in obj)
-        return f"{typename}{{{rep}}}"
-```
-
-### Parametrised Parser Functions
-If you look at the above example, the implementation is the exact same as for `glm::vec3` except for the length check. It is also possible to have extra arguments to the parser to parametrise these. The values can then be passed in via the decorator. Thus it is possible to have all three of the above types use the same parser, along with `glm::vec2`:
-```py
-def main(ctx):
-
-    @ctx.type("glm::vec2", length=2)
-    @ctx.type("glm::vec3", length=3)
-    @ctx.type("glm::vec4", length=4)
-    @ctx.type("glm::quat", length=4)
-    def _(typename, obj, length) -> str:
-        assert isinstance(obj, list)
-        assert len(obj) == length
-        rep = ", ".join(ctx.parse("float", val) for val in obj)
-        return f"{`typename}{{{rep}}}"
-```
-
-These extra parameters can also have default values which will be used if they are not specified in the decorator:
-```py
-    @ctx.type("glm::vec2", length=2)
-    @ctx.type("glm::vec3", length=3)
-    @ctx.type("glm::vec4")
-    @ctx.type("glm::quat")
-    def _(typename, obj, length=4) -> str: ...
-```
-
-### Templated Parser Functions
-So far we have just seen concrete type implementations. Datamatic also supports templated types. For example, the implementation of `std::vector<T>` is
-```py
-    @ctx.type("std::vector<{}>")
-    def _(typename, subtype, obj) -> str:
-        assert isinstance(obj, list)
-        rep = ", ".join(ctx.parse(subtype, x) for x in obj)
-        return f"{typename}{{{rep}}}"
-```
-This will match any type of the form `std::vector<{}>`, verifies the JSON object is a list, then verifies all of the subelements can be parsed as the matched subtype. Thus if you want a component to contain a vector of your custom type, you just need to provide the parser for the custom type.
-
-You may have noticed that the signature of this parser is different. When a templated type is used, the subtypes that match with the brackets are passed into the parser as args in between `typename` and `obj`. If there were two sets of brackets, for example `std::map<{}, {}>`, then the parser function signature should be `(typename, keytype, valuetype, obj)`.
-
-When calling `ctx.parse("std::vector<int>", [1, 2, 3])`, the following happens
-* A concrete definition for `std::vector<int>` is looked up, which fails.
-* The parser then loops through the templated functions until it finds one that matches. This uses [parse](https://pypi.org/project/parse/) under the hood.
-* It matches `std::vector<int>` with `std::vector<{}>` and extracts the subtype as `int`.
-* It calls the associated function with the arguments `("std::vector<int>", "int", [1, 2, 3])`.
-
-### Example of a Templated Parametrized Parser Functions
-Bringing it all together, the smart pointer parser is an example of a templated parametrized parser. It is templated because it contains a type, and it is parametrized because the default values rely on the `make_*` functions:
-```py
-    @ctx.type("std::unique_ptr<{}>", make_fn="std::make_unique")
-    @ctx.type("std::shared_ptr<{}>", make_fn="std::make_shared")
-    def _(typename, subtype, obj, make_fn) -> str:
-        if obj is not None:
-            return f"{make_fn}<{subtype}>{{{ctx.parse(subtype, obj)}}}"
-        return "nullptr"
-```
-
-### Variadic Templatized Parser Functions
-Even with all of this, we still cannot represent `std::tuple<Ts...>`, `std::variant<Ts...>`, or any type with a variadic number of types. This can be done using a variadic template parser function,:
-```py
-    @ctx.type("std::tuple<{}...>")
-    def _(typename, subtypes, obj) -> str:  # Here, "subtypes" is a list of types
-        assert isinstance(obj, list)
-        assert len(subtypes) == len(obj)
-        rep = ", ".join(ctx.parse(subtype, val) for subtype, val in zip(subtypes, obj))
-        return f"{typename}{{{rep}}}"
-```
-It is not permitted to have a variadic template and a non-variadic template in the same parser, so something like `my_type<{}, {}...>` is not allowed. However, this can be implemented in the future. The way this works is by first removing the "..." from the string; that is only used to tell the parser to store this separately. After that, it then parses the captured string into the list of types. This is done character by character and counts the brackets ("(", "[", "<", "{"); only ending a current type if the brackets are balanced. This ensures that `"int, float, std::map<int, float>"` is parsed correctly and *not* parsed as `["int", "float", "std::map<int", "float>"]`.
-
-### Standard Library Support
-Most of the standard template library is implemented by default. Datamatic currently supports the following out of the box:
-```cpp
-std::vector<{}>
-std::deque<{}>
-std::queue<{}>
-std::stack<{}>
-std::list<{}>
-std::forward_list<{}>
-
-std::set<{}>
-std::unordered_set<{}>
-std::multiset<{}>
-std::unordered_multiset<{}>
-
-std::array<{}, {}>
-std::pair<{}, {}>
-
-std::map<{}, {}>
-std::unordered_map<{}, {}>
-std::multimap<{}, {}>
-std::unordered_multimap<{}, {}>
-
-std::optional<{}>
-std::unique_ptr<{}>
-std::shared_ptr<{}>
-std::weak_ptr<{}>
-
-std::tuple<{}...>
-std::variant<{}...>
-std::monostate
-
-// No type checking done, default value is just a string that is substitued in unchecked
-// Due to no type checking, the signature can be anything, so variadic templates are not needed
-std::function<{}({})>
-```
-
-## Custom Functions
-As we have already seen, functions can be called in template files with the syntax `{{Comp::name}}` for example. This is calling the function `name` which resides in the `Comp` namespace, and all it does it return the component name. There may be other things you wish to print that are more complicated that simply the properties of components and attributes. Via the `Context` object, you can also register your own functions, meaning you can format C++ strings using all the tools in python.
+As the default offering is quite basic, you may find yourself needing to define your own functions in python that can generate more complex replacement strings. To do this, simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. These files should contain a `main` function that accepts one argument; this will be called with a `MethodRegister` object passed in. You can register your own functions with this to make them availble in templates. All `dmx` files will be imported before and code generation happens.
 
 For a very simple example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
-def main(ctx):
+def main(reg):
 
-    @ctx.compmethod("format.upper")
-    def _(comp):
+    @reg.compmethod("format.upper")
+    def _(spec, comp):
         return comp["name"].upper()
 ```
 There are a few important things here:
-* The decorator `compmethod` adds the function to the `Comp` namespace, while the `attrmethod` adds the function to the `Attr` namespace. A function can be added to both namespaces.
-* The string in the decorator is the name of the function when exposed to template files. This is specified here rather than using the name of the function to allow punctuation in the funtion name. The convention here is to use periods to "namespace" the functions. This is purely for style; there is no notion of namespacing going on here. Builtin functions for attribute access is not namespaced, and there are some other builtin functions that are not namespaced described more below. To avoid name clashing, all user functions should be namespaced, as I may add more builtin functions to datamatic, which will not be namespaced.
-* The `comp` parameter is the json object representing the component which comes directly from the json spec file.
+* The decorator `compmethod` adds the function to the `Comp` namespace, while `attrmethod` would add the function to the `Attr` namespace. A function can be added to both namespaces.
+* The string in the decorator is the name of the function when exposed to template files. This is specified here rather than using the name of the function to allow punctuation in the funtion name. It is recommended that functions contain a `"."` in the name to avoid clashes with properties, and properties should also not have a period in their name.
+* The `spec` parameter is a copy of the json spec but with all components and attributes that don't match the current blocks flags filtered out. For example, if a block had `SERIALISABLE=true`, then any component/attribute with this flag set to `false` would be missing here. As all flag data is used, it is also missing from the spec argument, as custom functions shouldn't need flag knowledge, as they could ignore the values and use the attributes however they like. Flags are a hard filter that custom functions cannot get around without doing significant hackery. Because the `flag_defaults` are not needed here, the spec is now just the list of components, so they don't need to be accessed via `spec['components']`. If there are no flags set on a block (which is probably the most common), then the spec is still "filtered", but no components or attributes will be removed, only the flag data will vanish.
+* The `comp` parameter is the json object representing the component which comes directly from the filtered spec (so will also be missing any components that don't match the flags).
 
 The above function can then be referenced in templates:
 ```cpp
@@ -342,20 +202,9 @@ std::string TransformComponentUpper()
 }
 
 ```
-### Builtin Functions
-As we have seen already, `{{Comp::name}}` calls the function `name` in the `Comp` namespace. This is an example of a builtin function. Builtin functions are exactly the same as custom functions, datamatic just explicitly calls `builtin.main(ctx)` before searching for user code, and it uses the exact same API. The implmentation is exactly what you might expect:
-```py
-def main(ctx):
 
-    @ctx.compmethod("name")
-    @ctx.attrmethod("name")
-    def _(obj):
-        return obj["name"]
-```
-You can find all of the builtin functions and type [here](datamatic/builtin.py).
-
-### Plugin Function Arguments
-We briefly mentioned earlier that replacement tokens can accept arguments. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp::if_not_last` function:
+### Custom Function Arguments
+We briefly mentioned earlier that replacement tokens can accept arguments, so let's take a look at how this works and how custom functions can make use of this. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp::if_not_last` function:
 ```cpp
 using ECS = TemplatedECS<
 DATAMATIC_BEGIN
@@ -374,21 +223,17 @@ using ECS = TemplatedECS<
 These arguments are then passed to the function definition in the order they appear:
 ```py
     @ctx.compmethod("if_not_last")
-    def _(comp, arg):
+    def _(spec, comp, arg):
 ```
 Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
 
-### Plugin Spec Access
-For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp::if_not_last` must know the entire spec in order to know if the current component is the last. The spec can be accessed through the `Context` object as `ctx.spec`. Thus `Comp::if_not_last` could be fully implemented as
-```py
-    @ctx.compmethod("if_not_last")
-    def _(comp, arg):
-        return arg if comp != ctx.spec["components"][-1] else ""
-```
-This does mean that custom functions could modify the spec, but obviously this is bad practice and you shouldn't do it.
+### Custom Function Spec Access
+For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp::if_not_last` must know the entire spec in order to know if the current component is the last. This is the primary motivation for the first argument of each custom function being the spec.
 
 ### Custom Data
-It is also sometimes useful to tag components and attributes with custom data to be used within plugins. For this, the spec schema allows for a `custom` field which is not checked. This can be used to have any kind of information that you want. As an example, suppose you are creating a level editor and want a GUI for entity modification created with [ImGUI](https://github.com/ocornut/imgui). You could create a custom function that returns ImGUI function call strings for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
+As mentioned, the properties that you choose to have on your components/attributes can be anything you want. It may also be useful to have properties that don't exist on all components, which should not be access directly in template files by attribute lookup, but may be used in custom functions.
+
+As an example, suppose you are creating a level editor and want a GUI for entity modification created with [ImGUI](https://github.com/ocornut/imgui). You could create a custom function that returns strings containing ImGUI function calls for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
 ```json
 {
     "name": "LightComponent",
@@ -398,51 +243,39 @@ It is also sometimes useful to tag components and attributes with custom data to
             "name": "position",
             "display_name": "Light Position",
             "type": "glm::vec3",
-            "default": [0.0, 0.0, 0.0],
-            "custom": {
-                "is_colour": false,
-                "drag_speed": 0.1
-            }
+            "default": "{0.0f, 0.0f, 0.0f}",
+            "is_colour": false,
+            "drag_speed": 0.1,
         },
         {
             "name": "colour",
             "display_name": "Light Colour",
             "type": "glm::vec3",
-            "default": [1.0, 1.0, 1.0],
-            "custom": {
-                "is_colour": true
-            }
+            "default": "{1.0f, 1.0f, 1.0f}",
+            "is_colour": true
         }
     ]
 }
 ```
 Then in the function you could write
 ```py
-    @ctx.attrmethod("interface.component")
-    def _(attr):
+    @reg.attrmethod("interface.component")
+    def _(spec, attr):
         name = attr["name"]
         display_name = attr["display_name"]
         ...
         if attr["type"] == "glm::vec3":
-            if attr["custom"]["is_colour"]:
+            if attr["custom"].get("is_colour", False):
                 return f'ImGui::ColorEdit3("{display_name}", &component.{name})'
             else:
                 drag_speed = attr["custom"]["drag_speed"]
                 return f'ImGui::DragFloat3("{display_name}", &component.{name}, drag_speed)'
         ...
 ```
-I've included drag speed here to emphasise that custom data can be any kind of JSON object so it is not the same as flags and both have different use cases.
+If a property is not intended to be called directly from templates, there is no need to restrict them to being strings (technically nothing is stopping you from using non-strings for accessable properties, but the generated code may be weird as the value will be stringified).
 
 With the ability to generate template code using the full power of python, it should be possible to generate any kind of code you want. If there are still limitations, let me know, I would love to extend datamatic further to make it more useful!
 
 ## Future
-* Have a nicer syntax for plugin function parameters. I would like to make the arguments comma separated and allow "," to be an argument as well. For this I will add a more sophisticated parser, but I haven't done it yet. After doing this, `Comp::if_not_last(,)` would become `Comp::if_not_last(",")` which is more akin to what people should expect.
-* Extend the builtin plugin to provide more useful functionality.
-* Support for more C++ standard types.
-* Support for more languages. Currently this is able to work for C++ and I am also using it to generate Lua code as it is mostly language agnostic. The exception is the type parser code. I have some ideas for this but just haven't gotten around to doing it yet.
+* Have a nicer syntax for custom function parameters. I would like to make the arguments comma separated and allow "," to be an argument as well. For this I will add a more sophisticated parser, but I haven't done it yet. After doing this, `Comp::if_not_last(,)` would become `Comp::if_not_last(",")` which is more akin to what people should expect.
 * I've considered having inline python code in the templates akin to using `eval`, which is often seen as dangerous, but we are already executing arbitrary code via the `dmx` system, so maybe it's no worse. I'm also considering going the other way and removing the discovery system and making users have to specify the extension files on the command line instead, but I haven't reached a conclusion here.
-* A unit testing suite and some integration tests that can be run to show off the generator.
-
-## Known Issues
-* Flags and specwide functions don't play well together. For example, if I want to have a list of all types that satisfy certain flags, unless that set of types includes the last type, then the list will still have a comma at the end, even if using `{{Comp::if_not_last(,)}}`. These functions should only check the flagged components rather than the entire spec.
-* The above issue highlights that custom functions do not have access to the flags set on the datamatic block. This is arguably a good thing, as the flags are only used to filter which components and attributes apply, and functions should not have access to that. However, this abtraction is broken by giving custom functions access to the entire spec. What should probably happen instead is that the context should contain a "filtered spec", giving functions access only to the components that are available in the spec. This would make things like `Comp::if_not_last` work as intended. (With more thought, the function api absolutely not have access to flags, that it what custom data is for. Flags are for filtering template blocks only).
