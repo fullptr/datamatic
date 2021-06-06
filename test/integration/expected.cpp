@@ -30,8 +30,8 @@ std::vector<std::string> types_with_flag_a_true = {
 };
 
 std::vector<std::string> types_with_flag_b_false = {
-    "TemporaryComponent",
-    "NameComponent"
+    "foobar",
+    "foobar"
 };
 
 

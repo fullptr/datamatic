@@ -22,7 +22,7 @@ DATAMATIC_END
 
 std::vector<std::string> types_with_flag_b_false = {
 DATAMATIC_BEGIN FLAG_B=false
-    "{{Comp::name}}"{{Comp::if_not_last(,)}}
+    "{{Comp::test.foo}}"{{Comp::if_not_last(,)}}
 DATAMATIC_END
 };
 

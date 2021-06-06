@@ -13,6 +13,13 @@ from datamatic import main
 src_dir = op.dirname(op.abspath(__file__))
 
 
+def copy_to_test(src_dir, out_dir, filename, new_filename=None):
+    if new_filename is None:
+        new_filename = filename
+    shutil.copy(op.join(src_dir, filename), op.join(out_dir, new_filename))
+    assert op.exists(op.join(out_dir, new_filename))
+
+
 def test_end_to_end_simple():
     """
     Creates a temporary directory and copies the template file. Run datamatic on the directory
@@ -27,11 +34,8 @@ def test_end_to_end_simple():
     out_dir = tempfile.mkdtemp(prefix="datamatic_")
     
     # Copy the template file into the output and verify it's there
-    shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
-    assert op.exists(op.join(out_dir, "actual.dm.cpp"))
-
-    shutil.copy(op.join(src_dir, "custom_functions.dmx.py"), op.join(out_dir, "custom_functions.dmx.py"))
-    assert op.exists(op.join(out_dir, "custom_functions.dmx.py"))
+    copy_to_test(src_dir, out_dir, "actual.dm.cpp")
+    copy_to_test(src_dir, out_dir, "custom_functions.dmx.py")
 
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
@@ -60,11 +64,9 @@ def test_file_is_not_rewritten_if_no_change():
     out_dir = tempfile.mkdtemp(prefix="datamatic_")
     
     # Copy the template file into the output and verify it's there. Also copy the expected.
-    shutil.copy(op.join(src_dir, "actual.dm.cpp"), op.join(out_dir, "actual.dm.cpp"))
-    assert op.exists(op.join(out_dir, "actual.dm.cpp"))
-
-    shutil.copy(op.join(src_dir, "expected.cpp"), op.join(out_dir, "actual.cpp"))
-    assert op.exists(op.join(out_dir, "actual.cpp"))
+    copy_to_test(src_dir, out_dir, "actual.dm.cpp")
+    copy_to_test(src_dir, out_dir, "custom_functions.dmx.py")
+    copy_to_test(src_dir, out_dir, "expected.cpp", "actual.cpp")
 
     # WHEN
     specfile = pathlib.Path(src_dir, "component_spec.json")
