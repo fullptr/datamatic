@@ -46,12 +46,7 @@ def validate_attribute(attr, flag_names):
     if not ATTR_KEYS_REQ <= set(attr.keys()):
         raise InvalidSpecError(f"Missing keys for {attr}: {ATTR_KEYS_REQ - set(attr.keys())}")
 
-    for key, value in attr.items():
-        if key == "flags":
-            validate_flags_on_object(value, flag_names)
-        else:
-            assert_type(key, str)
-            assert_type(value, str)
+    validate_flags_on_object(attr["flags"], flag_names)
 
 
 def validate_component(comp, flag_names):
@@ -61,16 +56,9 @@ def validate_component(comp, flag_names):
     if not COMP_KEYS_REQ <= set(comp.keys()):
         raise InvalidSpecError(f"Missing keys for {comp}: {COMP_KEYS_REQ - set(comp.keys())}")
 
-    for key, value in comp.items():
-        if key == "flags":
-            validate_flags_on_object(value, flag_names)
-        elif key == "attributes":
-            assert_type(value, list)
-            for attr in value:
-                validate_attribute(attr, flag_names)
-        else:
-            assert_type(key, str)
-            assert_type(value, str)
+    validate_flags_on_object(comp["flags"], flag_names)
+    for attr in comp["attributes"]:
+        validate_attribute(attr, flag_names)
 
 
 def run(spec):

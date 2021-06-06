@@ -162,7 +162,7 @@ As the default offering is quite basic, you may find yourself needing to define 
 
 For a very simple example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
-def main(reg):
+def main(reg: method_register.MethodRegister):
 
     @reg.compmethod("format.upper")
     def _(spec, comp):
