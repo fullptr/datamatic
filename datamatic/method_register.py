@@ -5,6 +5,15 @@ custom behaviour.
 """
 import pathlib
 import importlib.util
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class Context:
+    spec: list
+    comp: dict
+    attr: Optional[dict]  # Only populated for attrmethods
 
 
 class MethodRegister:
@@ -28,7 +37,9 @@ class MethodRegister:
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.methods:
             return self.methods[namespace, function_name]
-        return lambda _, obj: obj[function_name]
+        if namespace == "Comp":
+            return lambda ctx: ctx.comp[function_name]
+        return lambda ctx: ctx.attr[function_name]
 
     def load_builtins(self):
         """
@@ -36,27 +47,27 @@ class MethodRegister:
         """
 
         @self.compmethod("if_nth_else")
-        def if_nth_else(spec, comp, n, yes_token, no_token):
+        def if_nth_else(ctx, n, yes_token, no_token):
             try:
-                return yes_token if comp == spec[int(n)] else no_token
+                return yes_token if ctx.comp == ctx.spec[int(n)] else no_token
             except IndexError:
                 return no_token
 
         @self.compmethod("if_first")
-        def _(spec, comp, token):
-            return if_nth_else(spec, comp, "0", token, "")
+        def _(ctx, token):
+            return if_nth_else(ctx, "0", token, "")
 
         @self.compmethod("if_not_first")
-        def _(spec, comp, token):
-            return if_nth_else(spec, comp, "0", "", token)
+        def _(ctx, token):
+            return if_nth_else(ctx, "0", "", token)
 
         @self.compmethod("if_last")
-        def _(spec, comp, token):
-            return if_nth_else(spec, comp, "-1", token, "")
+        def _(ctx, token):
+            return if_nth_else(ctx, "-1", token, "")
 
         @self.compmethod("if_not_last")
-        def _(spec, comp, token):
-            return if_nth_else(spec, comp, "-1", "", token)
+        def _(ctx, token):
+            return if_nth_else(ctx, "-1", "", token)
 
     def load_from_dmx(self, directory: pathlib.Path):
         """
