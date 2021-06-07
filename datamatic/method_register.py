@@ -5,28 +5,22 @@ custom behaviour.
 """
 import pathlib
 import importlib.util
-from functools import partial
+from functools import partialmethod
 
 
 class MethodRegister:
     def __init__(self):
         self.methods = {}
-    
-    def compmethod(self, function_name=None):
-        return self.method("Comp", function_name)
 
+    def register_method(self, function, namespace):
+        fn_name = function.__name__
+        if (namespace, fn_name) in self.methods:
+            raise RuntimeError(f"An implementation already exists for {namespace}::{fn_name}")
+        self.methods[namespace, fn_name] = function
+        return function
 
-    def attrmethod(self, function_name=None):
-        return self.method("Attr", function_name)
-
-    def method(self, namespace, function_name=None):
-        def decorate(function):
-            fn_name = function_name or function.__name__
-            if (namespace, fn_name) in self.methods:
-                raise RuntimeError(f"An implementation already exists for {namespace}::{fn_name}")
-            self.methods[namespace, fn_name] = function
-            return function
-        return decorate
+    compmethod = partialmethod(register_method, namespace="Comp")
+    attrmethod = partialmethod(register_method, namespace="Attr")
 
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.methods:
@@ -40,8 +34,8 @@ class MethodRegister:
         A function for loading a bunch of built in custom functions.
         """
 
-        @self.compmethod()
-        @self.attrmethod()
+        @self.compmethod
+        @self.attrmethod
         def if_nth_else(ctx, n, yes_token, no_token):
             try:
                 if ctx.namespace == "Comp":
@@ -50,23 +44,23 @@ class MethodRegister:
             except IndexError:
                 return no_token
 
-        @self.compmethod()
-        @self.attrmethod()
+        @self.compmethod
+        @self.attrmethod
         def if_first(ctx, token):
             return if_nth_else(ctx, "0", token, "")
 
-        @self.compmethod()
-        @self.attrmethod()
+        @self.compmethod
+        @self.attrmethod
         def if_not_first(ctx, token):
             return if_nth_else(ctx, "0", "", token)
 
-        @self.compmethod()
-        @self.attrmethod()
+        @self.compmethod
+        @self.attrmethod
         def if_last(ctx, token):
             return if_nth_else(ctx, "-1", token, "")
 
-        @self.compmethod()
-        @self.attrmethod()
+        @self.compmethod
+        @self.attrmethod
         def if_not_last(ctx, token):
             return if_nth_else(ctx, "-1", "", token)
 

@@ -45,18 +45,18 @@ def dummy(spec, obj):
 
 
 def test_custom_function_lookup_success(reg):
-    reg.attrmethod("test.func")(dummy)
-    assert reg.get("Attr", "test.func") == dummy
+    reg.attrmethod(dummy)
+    assert reg.get("Attr", "dummy") == dummy
 
 
 def test_context_cannot_register_a_custom_method_twice(reg):
-    reg.compmethod("foo")(dummy)
+    reg.compmethod(dummy)
     with pytest.raises(RuntimeError):
-        reg.compmethod("foo")(dummy)
+        reg.compmethod(dummy)
 
-    reg.attrmethod("bar")(dummy)
+    reg.attrmethod(dummy)
     with pytest.raises(RuntimeError):
-        reg.attrmethod("bar")(dummy)
+        reg.attrmethod(dummy)
 
 
 @pytest.mark.parametrize("key,value", [
@@ -66,12 +66,25 @@ def test_context_cannot_register_a_custom_method_twice(reg):
     (1, 2)
 ])
 def test_property_access_comp(reg, key, value):
-    obj = {key: value}
-    ctx = generator.Context(spec=[obj], comp=obj, attr=None, namespace="Comp")
+    comp = {key: value}
+    ctx = generator.Context(spec=[comp], comp=comp, attr=None, namespace="Comp")
     assert reg.get("Comp", key)(ctx) == value
 
 
-def test_builtin_conditionals(reg, component):
+@pytest.mark.parametrize("key,value", [
+    ("name", "datamatic"),
+    ("display_name", "Datamatic"),
+    ("a", "abc"),
+    (1, 2)
+])
+def test_property_access_attr(reg, key, value):
+    attr = {key: value}
+    comp = {"attributes": [attr]}
+    ctx = generator.Context(spec=[], comp=comp, attr=attr, namespace="Attr")
+    assert reg.get("Attr", key)(ctx) == value
+
+
+def test_builtin_conditionals_comp(reg, component):
     ctx = generator.Context(spec=[component], comp=component, attr=None, namespace="Comp")
 
     assert reg.get("Comp", "if_nth_else")(ctx, "0", "a", "b") == "a"
@@ -81,3 +94,16 @@ def test_builtin_conditionals(reg, component):
     assert reg.get("Comp", "if_not_first")(ctx, "a") == ""
     assert reg.get("Comp", "if_last")(ctx, "a") == "a"
     assert reg.get("Comp", "if_not_last")(ctx, "a") == ""
+
+
+def test_builtin_conditionals_attr(reg, attribute):
+    comp = {"attributes": [attribute]}
+    ctx = generator.Context(spec=[comp], comp=comp, attr=attribute, namespace="Attr")
+
+    assert reg.get("Attr", "if_nth_else")(ctx, "0", "a", "b") == "a"
+    assert reg.get("Attr", "if_nth_else")(ctx, "1", "a", "b") == "b"
+
+    assert reg.get("Attr", "if_first")(ctx, "a") == "a"
+    assert reg.get("Attr", "if_not_first")(ctx, "a") == ""
+    assert reg.get("Attr", "if_last")(ctx, "a") == "a"
+    assert reg.get("Attr", "if_not_last")(ctx, "a") == ""

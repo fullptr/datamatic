@@ -1,5 +1,5 @@
 def main(register):
     
-    @register.compmethod("test.foo")
-    def _(ctx):
+    @register.compmethod
+    def test_function(ctx):
         return "foobar"
