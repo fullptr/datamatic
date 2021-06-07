@@ -15,6 +15,7 @@ class MethodRegister:
     def compmethod(self, function_name=None):
         return self.method("Comp", function_name)
 
+
     def attrmethod(self, function_name=None):
         return self.method("Attr", function_name)
 

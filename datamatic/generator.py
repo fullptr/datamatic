@@ -170,9 +170,10 @@ def run(src, spec, method_register):
         with dst.open() as dstfile:
             if dstfile.read() == out:
                 print(f"No change to {dst}")
-                return
+                return False
 
     with dst.open("w") as dstfile:
         dstfile.write(out)
 
     print(f"Generated file {dst}")
+    return True
