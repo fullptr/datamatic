@@ -67,7 +67,7 @@ def test_context_cannot_register_a_custom_method_twice(reg):
 ])
 def test_property_access_comp(reg, key, value):
     comp = {key: value}
-    ctx = generator.Context(spec=[comp], comp=comp, attr=None, namespace="Comp")
+    ctx = generator.Context(spec=[comp], comp=comp, attr=None)
     assert reg.get("Comp", key)(ctx) == value
 
 
@@ -80,12 +80,12 @@ def test_property_access_comp(reg, key, value):
 def test_property_access_attr(reg, key, value):
     attr = {key: value}
     comp = {"attributes": [attr]}
-    ctx = generator.Context(spec=[], comp=comp, attr=attr, namespace="Attr")
+    ctx = generator.Context(spec=[], comp=comp, attr=attr)
     assert reg.get("Attr", key)(ctx) == value
 
 
 def test_builtin_conditionals_comp(reg, component):
-    ctx = generator.Context(spec=[component], comp=component, attr=None, namespace="Comp")
+    ctx = generator.Context(spec=[component], comp=component, attr=None)
 
     assert reg.get("Comp", "if_nth_else")(ctx, "0", "a", "b") == "a"
     assert reg.get("Comp", "if_nth_else")(ctx, "1", "a", "b") == "b"
@@ -98,7 +98,7 @@ def test_builtin_conditionals_comp(reg, component):
 
 def test_builtin_conditionals_attr(reg, attribute):
     comp = {"attributes": [attribute]}
-    ctx = generator.Context(spec=[comp], comp=comp, attr=attribute, namespace="Attr")
+    ctx = generator.Context(spec=[comp], comp=comp, attr=attribute)
 
     assert reg.get("Attr", "if_nth_else")(ctx, "0", "a", "b") == "a"
     assert reg.get("Attr", "if_nth_else")(ctx, "1", "a", "b") == "b"
