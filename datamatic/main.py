@@ -40,5 +40,5 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
         if generator.run(file, spec, reg):
             count += 1
 
-    print("Done!")
+    print(f"Done! Generated {count} files")
     return count
