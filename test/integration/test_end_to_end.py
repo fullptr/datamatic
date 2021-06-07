@@ -3,7 +3,6 @@ An integration test that uses a specfile and a template file.
 """
 import shutil
 from pathlib import Path
-from unittest.mock import patch
 from typing import Optional
 from datamatic import main
 import pytest
@@ -38,7 +37,7 @@ def test_end_to_end_simple(src_path, tmp_path):
     copy_file(src_path, tmp_path, "custom_functions.dmx.py")
 
     specfile = src_path / "component_spec.json"
-    main.main(specfile, tmp_path)
+    assert main.main(specfile, tmp_path) == 1  # Assert one file is generated
 
     expected_file = src_path / "expected.cpp"
     actual_file = tmp_path / "actual.cpp"
@@ -60,7 +59,4 @@ def test_file_is_not_rewritten_if_no_change(src_path, tmp_path):
     copy_file(src_path, tmp_path, "expected.cpp", "actual.cpp")
 
     specfile = src_path / "component_spec.json"
-    with patch("builtins.print") as mock_print:
-        main.main(specfile, tmp_path)
-
-    mock_print.assert_any_call(f"No change to {tmp_path / 'actual.cpp'}")
+    assert main.main(specfile, tmp_path) == 0

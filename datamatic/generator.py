@@ -8,6 +8,17 @@ import parse
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
 
+@dataclass
+class Context:
+    spec: list
+    comp: dict
+    attr: Optional[dict]  # Only populated for attrmethods
+
+    @property
+    def namespace(self):
+        return "Attr" if self.attr is not None else "Comp"
+
+
 @dataclass(frozen=True)
 class Token:
     namespace: Literal["Comp", "Attr"]
@@ -72,14 +83,15 @@ def apply_flags_to_spec(spec, flags):
     return components
 
 
-def replace_token(matchobj, obj, spec, method_register):
+def replace_token(matchobj, comp, attr, spec, method_register):
     """
     Parse the replacement token in the matchobj to figure out the namespace, function name
     and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
     token = parse_token_string(matchobj.group(1))
     function = method_register.get(token.namespace, token.function_name)
-    return function(spec, obj, *token.args)
+    ctx = Context(spec=spec, comp=comp, attr=attr)
+    return function(ctx, *token.args)
 
 
 def process_block(block, flags, spec, method_register):
@@ -88,13 +100,13 @@ def process_block(block, flags, spec, method_register):
     for comp in filtered_spec:
         for line in block:
             while "{{Comp::" in line:
-                line = TOKEN.sub(partial(replace_token, obj=comp, spec=filtered_spec, method_register=method_register), line)
+                line = TOKEN.sub(partial(replace_token, comp=comp, attr=None, spec=filtered_spec, method_register=method_register), line)
 
             if "{{Attr::" in line:
                 for attr in comp["attributes"]:
                     newline = line
                     while "{{Attr::" in newline:
-                        newline = TOKEN.sub(partial(replace_token, obj=attr, spec=filtered_spec, method_register=method_register), newline)
+                        newline = TOKEN.sub(partial(replace_token, comp=comp, attr=attr, spec=filtered_spec, method_register=method_register), newline)
 
                     out += newline + "\n"
             else:
@@ -161,9 +173,10 @@ def run(src, spec, method_register):
         with dst.open() as dstfile:
             if dstfile.read() == out:
                 print(f"No change to {dst}")
-                return
+                return False
 
     with dst.open("w") as dstfile:
         dstfile.write(out)
 
     print(f"Generated file {dst}")
+    return True

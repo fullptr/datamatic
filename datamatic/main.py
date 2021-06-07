@@ -35,7 +35,10 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     reg.load_builtins()
     reg.load_from_dmx(directory)
 
+    count = 0
     for file in directory.glob("**/*.dm.*"):
-        generator.run(file, spec, reg)
+        if generator.run(file, spec, reg):
+            count += 1
 
-    print("Done!")
+    print(f"Done! Generated {count} files")
+    return count
