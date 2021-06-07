@@ -13,6 +13,7 @@ class Context:
     spec: list
     comp: dict
     attr: Optional[dict]  # Only populated for attrmethods
+    namespace: str
 
 
 @dataclass(frozen=True)
@@ -86,7 +87,7 @@ def replace_token(matchobj, comp, attr, spec, method_register):
     """
     token = parse_token_string(matchobj.group(1))
     function = method_register.get(token.namespace, token.function_name)
-    ctx = Context(spec=spec, comp=comp, attr=attr)
+    ctx = Context(spec=spec, comp=comp, attr=attr, namespace=token.namespace)
     return function(ctx, *token.args)
 
 
