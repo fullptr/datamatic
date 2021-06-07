@@ -164,22 +164,26 @@ For a very simple example, suppose you want to generate C++ functions which prin
 ```py
 def main(reg: method_register.MethodRegister):
 
-    @reg.compmethod("format.upper")
-    def _(spec, comp):
-        return comp["name"].upper()
+    @reg.compmethod
+    def format_upper(ctx):
+        return ctx.comp["name"].upper()
 ```
 There are a few important things here:
 * The decorator `compmethod` adds the function to the `Comp` namespace, while `attrmethod` would add the function to the `Attr` namespace. A function can be added to both namespaces.
-* The string in the decorator is the name of the function when exposed to template files. This is specified here rather than using the name of the function to allow punctuation in the funtion name. It is recommended that functions contain a `"."` in the name to avoid clashes with properties, and properties should also not have a period in their name.
-* The `spec` parameter is a copy of the json spec but with all components and attributes that don't match the current blocks flags filtered out. For example, if a block had `SERIALISABLE=true`, then any component/attribute with this flag set to `false` would be missing here. As all flag data is used, it is also missing from the spec argument, as custom functions shouldn't need flag knowledge, as they could ignore the values and use the attributes however they like. Flags are a hard filter that custom functions cannot get around without doing significant hackery. Because the `flag_defaults` are not needed here, the spec is now just the list of components, so they don't need to be accessed via `spec['components']`. If there are no flags set on a block (which is probably the most common), then the spec is still "filtered", but no components or attributes will be removed, only the flag data will vanish.
-* The `comp` parameter is the json object representing the component which comes directly from the filtered spec (so will also be missing any components that don't match the flags).
+* The function name is important; it is what is used when referencing the function in template files.
+* The `ctx` is a `Context` object containing the following fields:
+    * `spec`: This is a modified copy of the json spec; the flags on the datamatic block are applied and any components/attributes that don't satify the flags are filtered out here. All flag data is also removed. Since `flag_defaults` is also omitted, the spec at this point is just a list of components, so they don't need to be accessed via `spec['components']`. If there are no flags set on a block (which is probably the most common), then the spec is still "filtered", but no components or attributes will be removed, only the flag data will vanish.
+    * `comp`: The current component that we are generating code for. This is provided as some functions may need to be aware of which position the current component is in (see `if_not_last`).
+    * `attr`: The current attribute that we are generating code for. If the current function is a `compmethod`, then this field will be set to `None`.
+    * `namespace`: This is a property, and is set to `"Attr"` if the `attr` field is not `None` and `"Comp"` othewise.
+
 
 The above function can then be referenced in templates:
 ```cpp
 DATAMATIC_BEGIN
 std::string {{Comp::name}}Upper()
 {
-    return "{{Comp::format.upper}}";
+    return "{{Comp::format_upper}}";
 }
 
 DATAMATIC_END
@@ -222,13 +226,10 @@ using ECS = TemplatedECS<
 ```
 These arguments are then passed to the function definition in the order they appear:
 ```py
-    @ctx.compmethod("if_not_last")
-    def _(spec, comp, arg):
+    @ctx.compmethod
+    def if_not_last(ctx, arg):
 ```
 Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
-
-### Custom Function Spec Access
-For some plugin functions, it is not enough to simply have the current component or attribute. Some function require the entire component spec. For example, `Comp::if_not_last` must know the entire spec in order to know if the current component is the last. This is the primary motivation for the first argument of each custom function being the spec.
 
 ### Custom Data
 As mentioned, the properties that you choose to have on your components/attributes can be anything you want. It may also be useful to have properties that don't exist on all components, which should not be access directly in template files by attribute lookup, but may be used in custom functions.
@@ -259,8 +260,9 @@ As an example, suppose you are creating a level editor and want a GUI for entity
 ```
 Then in the function you could write
 ```py
-    @reg.attrmethod("interface.component")
-    def _(spec, attr):
+    @reg.attrmethod
+    def interface_component(ctx):
+        attr = ctx.attr
         name = attr["name"]
         display_name = attr["display_name"]
         ...
