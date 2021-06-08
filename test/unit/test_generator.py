@@ -40,21 +40,6 @@ def test_parse_token_string_failure(raw):
         generator.parse_token_string(raw)
 
 
-# generator.flag_filter has been removed, but its core logic is still in use and will
-# need to be covered with tests later, so this will be useful.
-#def test_flag_filtering():
-#    obj1 = {"flags": {"flag1": True, "flag2": False}}
-#    obj2 = {"flags": {"flag1": True, "flag2": True}}
-#    obj3 = {"flags": {"flag1": False, "flag2": False}}
-#    obj4 = {"flags": {"flag1": True, "flag2": True}}
-#    objects = [obj1, obj2, obj3, obj4]
-#
-#    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": True})) == [obj2, obj4]
-#    assert list(generator.flag_filter(objects, {"flag1": True, "flag2": False})) == [obj1]
-#    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": True})) == []
-#    assert list(generator.flag_filter(objects, {"flag1": False, "flag2": False})) == [obj3]
-
-
 def test_parse_flag_value():
     assert generator.parse_flag_val("true") == True
     assert generator.parse_flag_val("false") == False
@@ -204,3 +189,31 @@ def test_empty_flag_application():
     ]
 
     assert generator.apply_flags_to_spec(spec, {}) == expected
+
+
+@pytest.mark.parametrize("argument_list,expected", [
+    ('"a", "b", "c"', ("a", "b", "c")),
+    ('",", "b", "c"', (",", "b", "c")),
+    ('"a", "b", "c" "d"', ("a", "b", "cd")), # Comma splits args, consecutive string concatenate
+    ('"a" \'b\', "c",    "d"', ("ab", "c", "d")),
+    ('" "', (" ",)),
+    ('"a"', ("a",)),
+    ('" ", "a", "b "', (" ", "a", "b ")),
+    ("    'a', 'b'", ("a", "b")),
+    (""" "a", "b" """, ("a", "b")),
+    (""" "a", 'b' """, ("a", "b")),
+    ('","', (",",))
+])
+def test_parse_argument_list(argument_list, expected):
+    assert generator.parse_argument_list(argument_list) == expected
+
+
+@pytest.mark.parametrize("argument_list", [
+    "'a', 'b", # Unpaied quotes
+    "a, b, c" # No quotes
+    '"a",,"b"', # Consecutive commas
+    """ "a' """, # Mismatching quotes
+])
+def test_parse_argument_list_failure(argument_list):
+    with pytest.raises(SyntaxError):
+        generator.parse_argument_list(argument_list)
