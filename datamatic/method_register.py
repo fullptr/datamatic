@@ -36,33 +36,33 @@ class MethodRegister:
 
         @self.compmethod
         @self.attrmethod
-        def if_nth_else(ctx, n, yes_token, no_token):
+        def if_nth_else(ctx, n: int, yes_token: str, no_token:str) -> str:
             try:
                 if ctx.namespace == "Comp":
-                    return yes_token if ctx.comp == ctx.spec[int(n)] else no_token
-                return yes_token if ctx.attr == ctx.comp["attributes"][int(n)] else no_token
+                    return yes_token if ctx.comp == ctx.spec[n] else no_token
+                return yes_token if ctx.attr == ctx.comp["attributes"][n] else no_token
             except IndexError:
                 return no_token
 
         @self.compmethod
         @self.attrmethod
         def if_first(ctx, token):
-            return if_nth_else(ctx, "0", token, "")
+            return if_nth_else(ctx, 0, token, "")
 
         @self.compmethod
         @self.attrmethod
         def if_not_first(ctx, token):
-            return if_nth_else(ctx, "0", "", token)
+            return if_nth_else(ctx, 0, "", token)
 
         @self.compmethod
         @self.attrmethod
         def if_last(ctx, token):
-            return if_nth_else(ctx, "-1", token, "")
+            return if_nth_else(ctx, -1, token, "")
 
         @self.compmethod
         @self.attrmethod
         def if_not_last(ctx, token):
-            return if_nth_else(ctx, "-1", "", token)
+            return if_nth_else(ctx, -1, "", token)
 
     def load_from_dmx(self, directory: pathlib.Path):
         """

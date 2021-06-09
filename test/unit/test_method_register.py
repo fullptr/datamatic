@@ -87,8 +87,8 @@ def test_property_access_attr(reg, key, value):
 def test_builtin_conditionals_comp(reg, component):
     ctx = generator.Context(spec=[component], comp=component, attr=None)
 
-    assert reg.get("Comp", "if_nth_else")(ctx, "0", "a", "b") == "a"
-    assert reg.get("Comp", "if_nth_else")(ctx, "1", "a", "b") == "b"
+    assert reg.get("Comp", "if_nth_else")(ctx, 0, "a", "b") == "a"
+    assert reg.get("Comp", "if_nth_else")(ctx, 1, "a", "b") == "b"
 
     assert reg.get("Comp", "if_first")(ctx, "a") == "a"
     assert reg.get("Comp", "if_not_first")(ctx, "a") == ""
@@ -100,8 +100,8 @@ def test_builtin_conditionals_attr(reg, attribute):
     comp = {"attributes": [attribute]}
     ctx = generator.Context(spec=[comp], comp=comp, attr=attribute)
 
-    assert reg.get("Attr", "if_nth_else")(ctx, "0", "a", "b") == "a"
-    assert reg.get("Attr", "if_nth_else")(ctx, "1", "a", "b") == "b"
+    assert reg.get("Attr", "if_nth_else")(ctx, 0, "a", "b") == "a"
+    assert reg.get("Attr", "if_nth_else")(ctx, 1, "a", "b") == "b"
 
     assert reg.get("Attr", "if_first")(ctx, "a") == "a"
     assert reg.get("Attr", "if_not_first")(ctx, "a") == ""
