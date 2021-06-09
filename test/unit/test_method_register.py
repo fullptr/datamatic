@@ -4,6 +4,7 @@ Test driver for the builtin comp and attr methods.
 from datamatic import method_register, generator
 import pytest
 
+
 @pytest.fixture
 def reg():
     """

@@ -28,7 +28,6 @@ class Token:
     raw_string: Optional[str] = field(default=None, compare=False)
 
 
-
 def parse_token_string(raw_string: str) -> Token:
     """
     Format:
