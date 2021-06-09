@@ -226,7 +226,7 @@ using ECS = TemplatedECS<
 ```
 These arguments are then passed to the function definition in the order they appear:
 ```py
-    @ctx.compmethod
+    @reg.compmethod
     def if_not_last(ctx, arg):
 ```
 Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
