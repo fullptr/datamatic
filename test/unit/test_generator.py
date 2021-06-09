@@ -6,19 +6,9 @@ from pathlib import Path
 
 @pytest.mark.parametrize("raw,token", [
     ("Comp::foo", Token("Comp", "foo", tuple())),
-    ("Comp::foo(a)", Token("Comp", "foo", ("a",))),
-    ("Comp::foo(a|b)", Token("Comp", "foo", ("a", "b"))),
-    ("Comp::foo(a|b|c)", Token("Comp", "foo", ("a", "b", "c"))),
-
-    ("Comp::foo.bar", Token("Comp", "foo.bar", tuple())),
-    ("Comp::foo.bar(a)", Token("Comp", "foo.bar", ("a",))),
-    ("Comp::foo.bar(a|b)", Token("Comp", "foo.bar", ("a", "b"))),
-    ("Comp::foo.bar(a|b|c)", Token("Comp", "foo.bar", ("a", "b", "c"))),
-
-    ("Comp::foo.bar.baz", Token("Comp", "foo.bar.baz", tuple())),
-    ("Comp::foo.bar.baz(a)", Token("Comp", "foo.bar.baz", ("a",))),
-    ("Comp::foo.bar.baz(a|b)", Token("Comp", "foo.bar.baz", ("a", "b"))),
-    ("Comp::foo.bar.baz(a|b|c)", Token("Comp", "foo.bar.baz", ("a", "b", "c"))),
+    ("Comp::foo()", Token("Comp", "foo", tuple())),
+    ("Comp::foo('a')", Token("Comp", "foo", ("a",))),
+    ("Comp::foo('a', 'b')", Token("Comp", "foo", ("a", "b"))),
 ])
 def test_parse_token_string_success(raw, token):
     assert token == generator.parse_token_string(raw)
@@ -31,9 +21,9 @@ def test_empty_parentheses_is_valid():
 @pytest.mark.parametrize("raw", [
     "Comp",
     "Comp::foo::bar"
-    "Comp::foo(a"
-    "Comp::foo(a|"
-    "Comp::foo(a|b|)"
+    "Comp::foo('a'"
+    "Comp::foo('a',"
+    "Comp::foo('a', 'b',)"
 ])
 def test_parse_token_string_failure(raw):
     with pytest.raises(RuntimeError):
@@ -189,31 +179,3 @@ def test_empty_flag_application():
     ]
 
     assert generator.apply_flags_to_spec(spec, {}) == expected
-
-
-@pytest.mark.parametrize("argument_list,expected", [
-    ('"a", "b", "c"', ("a", "b", "c")),
-    ('",", "b", "c"', (",", "b", "c")),
-    ('"a", "b", "c" "d"', ("a", "b", "cd")), # Comma splits args, consecutive string concatenate
-    ('"a" \'b\', "c",    "d"', ("ab", "c", "d")),
-    ('" "', (" ",)),
-    ('"a"', ("a",)),
-    ('" ", "a", "b "', (" ", "a", "b ")),
-    ("    'a', 'b'", ("a", "b")),
-    (""" "a", "b" """, ("a", "b")),
-    (""" "a", 'b' """, ("a", "b")),
-    ('","', (",",))
-])
-def test_parse_argument_list(argument_list, expected):
-    assert generator.parse_argument_list(argument_list) == expected
-
-
-@pytest.mark.parametrize("argument_list", [
-    "'a', 'b", # Unpaied quotes
-    "a, b, c" # No quotes
-    '"a",,"b"', # Consecutive commas
-    """ "a' """, # Mismatching quotes
-])
-def test_parse_argument_list_failure(argument_list):
-    with pytest.raises(SyntaxError):
-        generator.parse_argument_list(argument_list)

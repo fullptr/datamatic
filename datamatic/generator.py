@@ -3,6 +3,7 @@ from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
 import parse
+import ast
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
@@ -27,46 +28,6 @@ class Token:
     raw_string: Optional[str] = field(default=None, compare=False)
 
 
-def parse_argument_list(argument_list: str) -> Tuple[str]:
-    """
-    Splits a string representing an argument list into a typle of arguments
-
-    Exmaples:
-    '",", "a", "5"' -> (",", "a", "5")
-    """
-    quotes = {"'", '"'}
-
-    args = []
-    current_symbol = ""
-    current_quote = None
-    parsing_symbol = False
-    for symbol in argument_list:
-        if parsing_symbol:
-            if symbol == current_quote: # End of symbol
-                parsing_symbol = False
-            else:
-                current_symbol += symbol
-        else:
-            if symbol in quotes:
-                current_quote = symbol
-                parsing_symbol = True
-            elif symbol == ",":
-                if current_symbol == "":
-                    raise SyntaxError(f"Failed to parse {argument_list}")
-                args.append(current_symbol)
-                current_symbol = ""
-            elif symbol == " ":
-                pass
-            else:
-                raise SyntaxError(f"Failed to parse {argument_list}")
-
-    if parsing_symbol: # Didn't close off the last symbol
-        raise SyntaxError(f"Failed to parse {argument_list}")
-    if current_symbol is not None:
-        args.append(current_symbol)
-    return tuple(args)
-
-
 
 def parse_token_string(raw_string: str) -> Token:
     """
@@ -81,7 +42,7 @@ def parse_token_string(raw_string: str) -> Token:
         namespace, rest = raw_string.split("::")
         if result := parse.parse("{}({})", rest):
             function_name = result[0]
-            args = parse_argument_list(result[1])
+            args = tuple(ast.literal_eval(result[1]))
         elif result := parse.parse("{}()", rest):
             function_name = result[0]
             args = tuple()

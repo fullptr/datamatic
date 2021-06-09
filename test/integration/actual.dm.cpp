@@ -16,13 +16,13 @@ DATAMATIC_END
 // Test Flags
 std::vector<std::string> types_with_flag_a_true = {
 DATAMATIC_BEGIN FLAG_A=true
-    "{{Comp::name}}"{{Comp::if_not_last(,)}}
+    "{{Comp::name}}"{{Comp::if_not_last(",")}}
 DATAMATIC_END
 };
 
 std::vector<std::string> types_with_flag_b_false = {
 DATAMATIC_BEGIN FLAG_B=false
-    "{{Comp::test_function}}"{{Comp::if_not_last(,)}}
+    "{{Comp::test_function}}"{{Comp::if_not_last(",")}}
 DATAMATIC_END
 };
 
