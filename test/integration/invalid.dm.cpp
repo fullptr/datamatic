@@ -12,7 +12,7 @@ struct {{Comp::name}}
 };
 
 DATAMATIC_BEGIN
-    "{{Comp::name}}"{{Comp::if_not_last(,)}}
+    "{{Comp::name}}"{{Comp::if_not_last(",")}}
 DATAMATIC_END
 DATAMATIC_END
 };

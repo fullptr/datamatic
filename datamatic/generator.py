@@ -3,6 +3,7 @@ from typing import Tuple, Literal, Optional
 from dataclasses import dataclass, field
 from functools import partial
 import parse
+import ast
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
@@ -40,7 +41,7 @@ def parse_token_string(raw_string: str) -> Token:
         namespace, rest = raw_string.split("::")
         if result := parse.parse("{}({})", rest):
             function_name = result[0]
-            args = tuple(arg.strip() for arg in result[1].split("|"))
+            args = tuple(ast.literal_eval(result[1]))
         elif result := parse.parse("{}()", rest):
             function_name = result[0]
             args = tuple()
