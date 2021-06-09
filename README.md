@@ -212,7 +212,7 @@ We briefly mentioned earlier that replacement tokens can accept arguments, so le
 ```cpp
 using ECS = TemplatedECS<
 DATAMATIC_BEGIN
-    {{Comp::name}}{{Comp::if_not_last(,)}}
+    {{Comp::name}}{{Comp::if_not_last(",")}}
 DATAMATIC_END
 >;
 ```
@@ -230,6 +230,8 @@ These arguments are then passed to the function definition in the order they app
     def if_not_last(ctx, arg):
 ```
 Notice that if the template calls the function with an incorrect number of arguments, an exception will be raised when trying to call this function.
+
+Another thing to note is that the parameter parsing is done by passing the contents in the parentheses to `ast.literal_eval`, so the parameters can be any of pythons primitive types, including lists, sets and dictionaries. However, note that if you use a set or dictionary, the curly braces could interfere with the parsing. For example, `{{Comp::if_not_last({1: "a": 2: {"b", "c"}})}}` could cause issues as the token would be parsed as `Comp::if_not_last({1: "a": 2: {"b", "c"`. Of course using anything other than a string for this function is probably unintended, but this is something users should be aware of when defining their own functions.
 
 ### Custom Data
 As mentioned, the properties that you choose to have on your components/attributes can be anything you want. It may also be useful to have properties that don't exist on all components, which should not be access directly in template files by attribute lookup, but may be used in custom functions.
@@ -277,7 +279,3 @@ Then in the function you could write
 If a property is not intended to be called directly from templates, there is no need to restrict them to being strings (technically nothing is stopping you from using non-strings for accessable properties, but the generated code may be weird as the value will be stringified).
 
 With the ability to generate template code using the full power of python, it should be possible to generate any kind of code you want. If there are still limitations, let me know, I would love to extend datamatic further to make it more useful!
-
-## Future
-* Have a nicer syntax for custom function parameters. I would like to make the arguments comma separated and allow "," to be an argument as well. For this I will add a more sophisticated parser, but I haven't done it yet. After doing this, `Comp::if_not_last(,)` would become `Comp::if_not_last(",")` which is more akin to what people should expect.
-* I've considered having inline python code in the templates akin to using `eval`, which is often seen as dangerous, but we are already executing arbitrary code via the `dmx` system, so maybe it's no worse. I'm also considering going the other way and removing the discovery system and making users have to specify the extension files on the command line instead, but I haven't reached a conclusion here.
