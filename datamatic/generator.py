@@ -1,6 +1,6 @@
 import re
 from typing import Tuple, Literal, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
 import parse
 import ast
@@ -25,7 +25,6 @@ class Token:
     namespace: Literal["Comp", "Attr"]
     function_name: str
     args: Tuple[str]
-    raw_string: Optional[str] = field(default=None, compare=False)
 
 
 def parse_token_string(raw_string: str) -> Token:
@@ -34,8 +33,8 @@ def parse_token_string(raw_string: str) -> Token:
     ("Comp"|"Attr") "::" function_name ["(" <args> ")"]
 
     Examples:
-    "Comp::conditional.if_nth_else(2|,|.)"
-    "Comp::name"
+    Comp::if_nth_else(2, ",", ".")
+    Comp::name
     """
     try:
         namespace, rest = raw_string.split("::")
@@ -55,7 +54,6 @@ def parse_token_string(raw_string: str) -> Token:
         namespace=namespace,
         function_name=function_name,
         args=args,
-        raw_string=raw_string,
     )
     
 
@@ -116,12 +114,6 @@ def process_block(block, flags, spec, method_register):
     return out
 
 
-def get_header(dst):
-    if dst.suffix == ".lua":
-        return "-- GENERATED FILE\n"
-    return "// GENERATED FILE\n"
-
-
 def parse_flag_val(val):
     valid_vals = {"true", "false"}
     if val not in valid_vals:
@@ -135,9 +127,8 @@ def parse_flags(flags):
         flag = flag.split("=")
         if len(flag) != 2:
             raise RuntimeError(f"In correct number of tokens in flag {flag}, must have exactly one '='")
-        name = flag[0]
-        val = parse_flag_val(flag[1])
-        parsed_flags[name] = val
+        name, val_raw = flag
+        parsed_flags[name] = parse_flag_val(val_raw)
     return parsed_flags
 
 
@@ -150,7 +141,7 @@ def run(src, spec, method_register):
     in_block = False
     block = []
     flags = set()
-    out = get_header(dst)
+    out = ""
     for line in lines:
         line = line.rstrip()
 

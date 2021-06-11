@@ -10,20 +10,14 @@ class InvalidSpecError(RuntimeError):
     """
 
 
-COMP_KEYS_REQ = {
-    "attributes",
-    "flags"
-}
-
-
-ATTR_KEYS_REQ = {
-    "flags"
-}
-
-
 def assert_type(object, expected_type):
     if not isinstance(object, expected_type):
         raise InvalidSpecError(f"{object=} must be a {expected_type}, got {type(object)}")
+
+
+def assert_property(object, property: str):
+    if property not in object:
+        raise InvalidSpecError(f"'{property}' is missing from {object}")
 
 
 def validate_flags_on_object(flags, flag_names):
@@ -40,12 +34,7 @@ def validate_flags_on_object(flags, flag_names):
 
 
 def validate_attribute(attr, flag_names):
-    """
-    Asserts that the given attribute is well-formed.
-    """
-    if not ATTR_KEYS_REQ <= set(attr.keys()):
-        raise InvalidSpecError(f"Missing keys for {attr}: {ATTR_KEYS_REQ - set(attr.keys())}")
-
+    assert_property(attr, "flags")
     validate_flags_on_object(attr["flags"], flag_names)
 
 
@@ -53,10 +42,11 @@ def validate_component(comp, flag_names):
     """
     Asserts that the given component is well-formed.
     """
-    if not COMP_KEYS_REQ <= set(comp.keys()):
-        raise InvalidSpecError(f"Missing keys for {comp}: {COMP_KEYS_REQ - set(comp.keys())}")
-
+    assert_property(comp, "flags")
     validate_flags_on_object(comp["flags"], flag_names)
+
+    assert_property(comp, "attributes")
+    assert_type(comp["attributes"], list)
     for attr in comp["attributes"]:
         validate_attribute(attr, flag_names)
 
