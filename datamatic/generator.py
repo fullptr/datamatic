@@ -127,8 +127,8 @@ def parse_flags(flags):
         flag = flag.split("=")
         if len(flag) != 2:
             raise RuntimeError(f"In correct number of tokens in flag {flag}, must have exactly one '='")
-        name, val_raw = flag
-        parsed_flags[name] = parse_flag_val(val_raw)
+        name, value = flag
+        parsed_flags[name] = parse_flag_val(value)
     return parsed_flags
 
 
