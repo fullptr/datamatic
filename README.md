@@ -1,5 +1,5 @@
 # Datamatic
-A python package for generating C++ and Lua source code.
+A python package for generating source code for entity component systems. This is entirely language agnostic and can generate code for any language.
 
 [![Build Status](https://travis-ci.com/MagicLemma/datamatic.svg?branch=main)](https://travis-ci.com/MagicLemma/datamatic)
 [![codecov](https://codecov.io/gh/MagicLemma/datamatic/branch/main/graph/badge.svg?token=4BJRUHXX5H)](https://codecov.io/gh/MagicLemma/datamatic)
@@ -8,21 +8,19 @@ A python package for generating C++ and Lua source code.
 ## Motivation
 As part of another project, I am using an [Entity Component System](https::github.com/MagicLemms/apecs). However, I kept finding areas where I needed to loop over all component types to implement logic, for example, exposing components to Lua, displaying them withing an ImGui editor window, and writing serialisation code. This made adding new components very cumbersome, as there would be several different areas of the code that would need updating.
 
-With this tool, components can be defined in a json file, and C++ and Lua source templates can be provided which will be used to generate the actual files with the components added in. With this approach, adding a new component is trivial; I just add it to the json component spec and rerun the tool and all the source code will be generated.
+With this tool, components can be defined in a json file, and source code templates can be provided which will be used to generate the actual files with the components added in. With this approach, adding a new component is trivial; I just add it to the json component spec and rerun the tool and all the source code will be generated.
 
 ## Usage
-Firstly, you must create a component spec json file. As a basic example (flags, custom types and other features explained later):
+Firstly, you must create a component spec json file. This is a json object with two top level attributes: `"flag_defaults"` (which we will discuss later) and `"components"`. "components" must be a list of json objects describing your components, and each of these must contain an `"attributes"` list. Both components and attributes may have `"flags"` as a field. These are the only "special" fields that datamatic looks for. Aside from those, you are free to add any fields that are meaningful to your code base. As a basic example:
 ```json
 {
     "flag_defaults": [],
     "components": [
         {
             "name": "NameComponent",
-            "display_name": "Name",
             "attributes": [
                 {
                     "name": "name",
-                    "display_name": "Name",
                     "type": "std::string",
                     "default": "\"Entity\""
                 }
@@ -30,7 +28,6 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
         },
         {
             "name": "HealthComponent",
-            "display_name": "Health",
             "attributes": [
                 {
                     "name": "current_health",
@@ -48,7 +45,6 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
         },
         {
             "name": "TransformComponent",
-            "display_name": "Transform",
             "attributes": [
                 {
                     "name": "position",
@@ -73,7 +69,9 @@ Firstly, you must create a component spec json file. As a basic example (flags, 
     ]
 }
 ```
-For a full description of what a valid schema is, see [Validator.py](Datamatic/Validator.py). Next, create some template files. These can exist anywhere in your repository and must have a `.dm.*` suffix. When datamatic is ran, the generated file will be created in the same location without the `.dm`. For example, if you have `components.dm.h`, a `components.h` file will be created. An example of a template file is:
+In this example, I have decided that components should have a `"name"` field, while attributes should have `"name"`, `"display_name"`, `"type"` and `"default"`. For a full description of what a valid schema is, see [validator.py](datamatic/validator.py).
+
+Next, create some template files. These can exist anywhere in your repository and must have a `.dm.*` suffix. When datamatic is ran, the generated file will be created in the same location without the `.dm`. For example, if you have `components.dm.h`, a `components.h` file will be created. An example of a template file below, notice how we are referring to the fields we have in our spec file:
 ```cpp
 #include <glm/glm.hpp>
 
@@ -89,6 +87,7 @@ Notice a few things
 * A block of template of code is defined by being between lines containing `DATAMATIC_BEGIN` and `DATAMATIC_END`.
 * Replacement tokens are of the form `{{Namespace::function_name(args)}}`. If a function takes no arguments, the parentheses may be omitted. All of these functions return strings to insert into the output file.
 * As seen above, if you instead specify the name of a property, that is returned (provided there is no function with the same name). Specifically, if no function with the given name is found, a default function is returned which simply does a property lookup on the given component/attribute.
+* Aside from the property lookup functions used above, there are some builtin functions to provide some basic functionality, and datamatic also provides a way for you to provide your own custom python functions that can return any kind of string you like (more on that below).
 * The block is copied for each of the components in the spec, and functions in the `Comp` namespace are called with the current component implicitly passed in. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 * The only valid namespaces are `Comp` and `Attr`.
 * There is nothing special about `name`, `display_name` and `default` above, you can have any property on your components that you like. However, if you are making use of them directly like `{{Comp::name}}`, that property must obviously be provided for all components. It may be beneficial to have some properties that only appear on some components for the sake of custom functions, more on that below.
@@ -151,7 +150,7 @@ DATAMATIC_END
 ```
 Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
 
-## Functions (More Detail)
+## Functions
 As mentioned earlier, replacement tokens in template files are of the form `{{Namespace::function_name(args)}}`, where the parentheses can be omitted if the function takes no arguements. By default, the only things available are some useful builtin functions as well as property lookup. As an example, suppose datamatic finds `{{Comp::name}}` when generating a file. The following happens:
 
 * A function with the name `name` is looked up.
@@ -207,7 +206,7 @@ std::string TransformComponentUpper()
 
 ```
 
-### Custom Function Arguments
+### Function Arguments
 We briefly mentioned earlier that replacement tokens can accept arguments, so let's take a look at how this works and how custom functions can make use of this. For example, suppose you want to create a list of component types that's comma separated. You need a comma after each component except for the last one. This can be done using the builtin `Comp::if_not_last` function:
 ```cpp
 using ECS = TemplatedECS<
@@ -240,7 +239,6 @@ As an example, suppose you are creating a level editor and want a GUI for entity
 ```json
 {
     "name": "LightComponent",
-    "display_name": "Light",
     "attributes": [
         {
             "name": "position",
