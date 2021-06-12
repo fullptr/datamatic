@@ -62,6 +62,10 @@ def apply_flags_to_spec(spec, flags):
     Returns a copy of the component list but with the given flags applied; any component or
     attribute that doesn't match the given flags are omitted.
     """
+    # If we are not using flags, then no filtering is required.
+    if "flag_defaults" not in spec:
+        return spec
+
     components = []
     for comp in spec["components"]:
         if all(comp['flags'][key] == value for key, value in flags.items()):

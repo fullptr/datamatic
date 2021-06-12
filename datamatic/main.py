@@ -16,6 +16,9 @@ def load_spec(specfile: pathlib.Path):
 
 
 def fill_flag_defaults(spec):
+    if "flag_defaults" not in spec:
+        return
+        
     defaults = spec["flag_defaults"]
     for comp in spec["components"]:
         comp_flags = comp.get("flags", {})

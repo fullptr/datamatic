@@ -6,14 +6,9 @@ from datamatic.validator import InvalidSpecError
 import pytest
 
 
-def test_spec_missing_required_keys():
-    spec = {"components": []}
+def test_spec_missing_components_key():
     with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
-    spec = {"flag_defaults": {}}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
+        validator.run({})
 
 
 def test_validate_attribute_missing_required_key():
@@ -55,19 +50,19 @@ def test_validate_attribute_types():
 def test_validate_flags_on_object():
     # obj must be a dict
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_on_object([], set())
+        validator.validate_flags_on_object({}, set())
 
     # foo is not a valid flag
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_on_object({"foo": True}, {"bar"})
+        validator.validate_flags_on_object({"flags": {"foo": True}}, {"bar"})
 
     # keys must be a str
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_on_object({1: True}, {1})
+        validator.validate_flags_on_object({"flags": {1: True}}, {1})
 
     # value must be a bool
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_on_object({"foo": 1}, {"foo"})
+        validator.validate_flags_on_object({"flags": {"foo": 1}}, {"foo"})
 
 
 def test_validate_component_missing_required_key():
@@ -104,11 +99,6 @@ def test_validate_component_types():
 
 
 def test_validator_run():
-    # doesn't have the correct keys
-    spec = {}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
     # has invalid extra keys
     spec = {"flags_defaults": {}, "components": [], "extra": []}
     with pytest.raises(InvalidSpecError):
@@ -125,3 +115,9 @@ def test_validator_components_must_be_a_list():
     spec = {"flags_defaults": {}, "components": None}
     with pytest.raises(InvalidSpecError):
         validator.run(spec)
+
+    
+def test_objects_cant_have_flags_if_no_defaults():
+    obj = {"flags": {}}
+    with pytest.raises(InvalidSpecError):
+        validator.validate_flags_on_object(obj, None)
