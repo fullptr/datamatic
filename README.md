@@ -11,10 +11,11 @@ As part of another project, I am using an [Entity Component System](https::githu
 With this tool, components can be defined in a json file, and source code templates can be provided which will be used to generate the actual files with the components added in. With this approach, adding a new component is trivial; I just add it to the json component spec and rerun the tool and all the source code will be generated.
 
 ## Usage
-Firstly, you must create a component spec json file. This is a json object with two top level attributes: `"flag_defaults"` (which we will discuss later) and `"components"`. "components" must be a list of json objects describing your components, and each of these must contain an `"attributes"` list. Both components and attributes may have `"flags"` as a field. These are the only "special" fields that datamatic looks for. Aside from those, you are free to add any fields that are meaningful to your code base. As a basic example:
+Firstly, you must create a component spec json file. In its simplest form, this is just a dict with a single `"components"` field, which is a list of your components. An object representing a component must contain an `"attributes"` field which is a list of the attributes for that component. Other than that, you are free to add any fields you like to both your components and attributes.
+
+For example, if you want your components to have a `"name"`, and you attributes to have a `"name"`, `"type"` and `"default"` value, you could define a spec that looks something like this:
 ```json
 {
-    "flag_defaults": [],
     "components": [
         {
             "name": "NameComponent",
@@ -31,13 +32,11 @@ Firstly, you must create a component spec json file. This is a json object with 
             "attributes": [
                 {
                     "name": "current_health",
-                    "display_name": "Current Health",
                     "type": "float",
                     "default": "100.0f"
                 },
                 {
                     "name": "max_health",
-                    "display_name": "Maximum Health",
                     "type": "float",
                     "default": "100.0f"
                 }
@@ -48,19 +47,16 @@ Firstly, you must create a component spec json file. This is a json object with 
             "attributes": [
                 {
                     "name": "position",
-                    "display_name": "Position",
                     "type": "glm::vec3",
                     "default": "{0.0f, 0.0f, 0.0f}"
                 },
                 {
                     "name": "orientation",
-                    "display_name": "Orientation",
                     "type": "glm::quat",
                     "default": "{0.0f, 0.0f, 0.0f, 1.0f}"
                 },
                 {
                     "name": "scale",
-                    "display_name": "Scale",
                     "type": "glm::vec3",
                     "default": "{1.0f, 1.0f, 1.0f}"
                 }
@@ -69,9 +65,7 @@ Firstly, you must create a component spec json file. This is a json object with 
     ]
 }
 ```
-In this example, I have decided that components should have a `"name"` field, while attributes should have `"name"`, `"display_name"`, `"type"` and `"default"`. For a full description of what a valid schema is, see [validator.py](datamatic/validator.py).
-
-Next, create some template files. These can exist anywhere in your repository and must have a `.dm.*` suffix. When datamatic is ran, the generated file will be created in the same location without the `.dm`. For example, if you have `components.dm.h`, a `components.h` file will be created. An example of a template file below, notice how we are referring to the fields we have in our spec file:
+Next, create some template files. These can exist anywhere in your repository and must have a `.dm.*` suffix. When datamatic is ran, the generated file will be created in the same location without the `.dm`. For example, if you have `components.dm.h`, a `components.h` file will be created. An example of a template file is below, notice how we are referring to the fields we have in our spec file:
 ```cpp
 #include <glm/glm.hpp>
 
@@ -85,12 +79,11 @@ DATAMATIC_END
 ```
 Notice a few things
 * A block of template of code is defined by being between lines containing `DATAMATIC_BEGIN` and `DATAMATIC_END`.
-* Replacement tokens are of the form `{{Namespace::function_name(args)}}`. If a function takes no arguments, the parentheses may be omitted. All of these functions return strings to insert into the output file.
+* Replacement tokens are of the form `{{Namespace::field}}`.
 * As seen above, if you instead specify the name of a property, that is returned (provided there is no function with the same name). Specifically, if no function with the given name is found, a default function is returned which simply does a property lookup on the given component/attribute.
 * Aside from the property lookup functions used above, there are some builtin functions to provide some basic functionality, and datamatic also provides a way for you to provide your own custom python functions that can return any kind of string you like (more on that below).
 * The block is copied for each of the components in the spec, and functions in the `Comp` namespace are called with the current component implicitly passed in. The `Attr` namespace works differently. If a line has an `Attr` symbol, that line is duplicated for each attribute in the component, so it isn't necessary to specify a loop when specifying attributes.
 * The only valid namespaces are `Comp` and `Attr`.
-* There is nothing special about `name`, `display_name` and `default` above, you can have any property on your components that you like. However, if you are making use of them directly like `{{Comp::name}}`, that property must obviously be provided for all components. It may be beneficial to have some properties that only appear on some components for the sake of custom functions, more on that below.
 * A file can have multiple template blocks.
 
 Running datamatic is very simple:
@@ -123,7 +116,11 @@ struct TransformComponent
 ```
 
 ## Flags
-You may have noticed in the spec file above that it contained a `flag_defaults` top level attribute. Flags provide a way to set boolean flags on components and attributes which can be used to ignore certain components/attributes in template blocks. For example, when saving a game, we may not want the health of entities to be saved (not a great example but it works to demonstrate the point). We can declare a flag called `SERIALISABLE` in the spec file in the following way
+By default, when a block of template code is processed, all components are looped over, and when an `Attr` token is found, all attributes in the component are looped over too. This is good for most cases, but there may be situations where you only want to loop over a subset of components, or maybe a subset for attributes.
+
+For example, you may want to generate serialsation code, but there may be certain components and attributes that you may not want to save. This can be achieved using flags. You define flags by adding a field called `"flag_defaults"` to your spec, which list out all of your flags names along with their default value. You can then set these on components and attributes by giving them a `"flags"` field.
+
+In the example below, I have a `DebugComponent` which is meant to be used to store a note for debugging only, and should not be part of a saved world. To exclude this from my serialisation code, I have defied a `"SERIALISABLE"` flag with a default value of `true`, and I have set the value of this flag on the entire `DebugComponent` to `false`. Further, I have added a new attribute to `HealthComponent` which will keep track of how long the entity has been alive for in this session. As I want this to reset if I reload the world, I don't want this attribute to be saved, so I have given it the same flag override.
 ```json
 {
     "flag_defaults": {
@@ -131,53 +128,85 @@ You may have noticed in the spec file above that it contained a `flag_defaults` 
     },
     "components": [
         {
-            "name": "HealthComponent",
-            "display_name": "Health",
+            "name": "DebugComponent",
             "flags": {
                 "SERIALISABLE": false
             },
-            "attributes": [ ... ]
+            "attributes": [
+                {
+                    "name": "note",
+                    "type": "std::string",
+                    "default: "\"\""
+                }
+            ]
         },
-        ...
+        {
+            "name": "HealthComponent",
+            "attributes": [
+                {
+                    "name": "current_health",
+                    "type": "float",
+                    "default": "100.0f"
+                },
+                {
+                    "name": "max_health",
+                    "type": "float",
+                    "default": "100.0f"
+                },
+                {
+                    "name": "time_alive_this_session",
+                    "type": "double",
+                    "default": "0.0",
+                    "flags": {
+                        "SERIALISABLE": false
+                    }
+                }
+            ]
+        }
     ]
 }
 ```
-If a flag is not specified for a component or attribute, the default value is used. Then the serialisation code template may look like
+Then the serialisation code template may look like
 ```cpp
 DATAMATIC_BEGIN SERIALISABLE=true
     // Serialisation code here
 DATAMATIC_END
 ```
-Flags are passed on the `DATAMATIC_BLOCK` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `HealthComponent` would be skipped over.
+Flags are passed on the `DATAMATIC_BEGIN` line, and only components/attributes with the flag set to the given value are looped over. In this case, the `DebugComponent` would be skipped over completely, and when generating code for the `HealthComponent`, any `Attr` line would skip the `time_alive_this_session` field.
 
 ## Functions
-As mentioned earlier, replacement tokens in template files are of the form `{{Namespace::function_name(args)}}`, where the parentheses can be omitted if the function takes no arguements. By default, the only things available are some useful builtin functions as well as property lookup. As an example, suppose datamatic finds `{{Comp::name}}` when generating a file. The following happens:
+We previously mentioned that replacement tokens are of the form `{{Namespace::field}}`. This is not quite true; if it were, datamatic would be very restrictive with what you could express. If, for example, you needed the component name in capitals, the only way you could do that would be to add an extra field to your component spec and manually fill it in, which would be tedious and also error prone. To solve this, datamatic also can handle tokens of the form `{{Namespace::function(args)}}`, where the function is a function in python that receives the current spec, current component/attribute, and the specified `args`, and can return any string which is used in the output.
 
-* A function with the name `name` is looked up.
-* If there is no such function, it returns the property `"name"` from the current component.
-* If the current component has no `name` property, a `KeyError` will be raised and the generating will stop.
+In fact, field lookup that we have seen so far is just a special case of this. What actually happens when datamatic encouters `{{Namespace::field}}` is:
+* Look for a function called `field` in the "method register" (more on that soon).
+* If a function is found, call that function. The return value is used in the generated file in place of the token.
+* If a function is not found, return a "default" function that simply does a field lookup on the current component/attribute that we are generating code for.
+* If there is no such field, an error is raied.
 
-As the default offering is quite basic, you may find yourself needing to define your own functions in python that can generate more complex replacement strings. To do this, simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. These files should contain a `main` function that accepts one argument; this will be called with a `MethodRegister` object passed in. You can register your own functions with this to make them availble in templates. All `dmx` files will be imported before and code generation happens.
+What functions are available? By default there are some very basic functions "builtin", but the real power here comes from letting users define and register their own custom methods written in python. To do this, simply have files in your directory with the suffix `*.dmx.py`, and when datamatic scans your directory for template files, any `dmx` files will be discovered and imported. These files should contain a `main` function that accepts one argument; this will be called with a `MethodRegister` object passed in. You can register your own functions with this to make them availble in templates. All `dmx` files will be imported before and code generation happens.
 
-For a very simple example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
+Going back to a previous example, suppose you want to generate C++ functions which print the component names in upper case. For this, you could create the following `dmx` file:
 ```py
 def main(reg: method_register.MethodRegister):
 
     @reg.compmethod
     def format_upper(ctx):
+        """
+        Returns the current components name in upper case.
+        """
         return ctx.comp["name"].upper()
 ```
 There are a few important things here:
 * The decorator `compmethod` adds the function to the `Comp` namespace, while `attrmethod` would add the function to the `Attr` namespace. A function can be added to both namespaces.
 * The function name is important; it is what is used when referencing the function in template files.
 * The `ctx` is a `Context` object containing the following fields:
-    * `spec`: This is a modified copy of the json spec; the flags on the datamatic block are applied and any components/attributes that don't satify the flags are filtered out here. All flag data is also removed. Since `flag_defaults` is also omitted, the spec at this point is just a list of components, so they don't need to be accessed via `spec['components']`. If there are no flags set on a block (which is probably the most common), then the spec is still "filtered", but no components or attributes will be removed, only the flag data will vanish.
-    * `comp`: The current component that we are generating code for. This is provided as some functions may need to be aware of which position the current component is in (see `if_not_last`).
+    * `spec`: This is a modified copy of the json spec; the flags on the datamatic block are applied and any components/attributes that don't satify the flags are missing here. All flag data is also removed. Since `flag_defaults` is also omitted, the spec at this point is just a list of components, so they don't need to be accessed via `spec['components']`. If there are no flags set on a block (which is probably the most common), then the spec is still "filtered", but no components or attributes will be removed, only the flag data will vanish. Most custom functions will not need this, but it is here in case your custom function needs to know the position of the current components in the spec (as is the case with the builtin functions `if_not_last` and related).
+    * `comp`: The current component that we are generating code for.
     * `attr`: The current attribute that we are generating code for. If the current function is a `compmethod`, then this field will be set to `None`.
     * `namespace`: This is a property, and is set to `"Attr"` if the `attr` field is not `None` and `"Comp"` othewise.
 
 
-The above function can then be referenced in templates:
+The above function can then be referenced in templates (note that if the function takes no arguments then the parentheses can be omitted):
 ```cpp
 DATAMATIC_BEGIN
 std::string {{Comp::name}}Upper()
@@ -232,48 +261,27 @@ Notice that if the template calls the function with an incorrect number of argum
 
 Another thing to note is that the parameter parsing is done by passing the contents in the parentheses to `ast.literal_eval`, so the parameters can be any of pythons primitive types, including lists, sets and dictionaries. However, note that if you use a set or dictionary, the curly braces could interfere with the parsing. For example, `{{Comp::if_not_last({1: "a": 2: {"b", "c"}})}}` could cause issues as the token would be parsed as `Comp::if_not_last({1: "a": 2: {"b", "c"`. Of course using anything other than a string for this function is probably unintended, but this is something users should be aware of when defining their own functions.
 
-### Custom Data
-As mentioned, the properties that you choose to have on your components/attributes can be anything you want. It may also be useful to have properties that don't exist on all components, which should not be access directly in template files by attribute lookup, but may be used in custom functions.
+### Function-Only Data
+As previously seen, fields on your components/attributes can be whatever you wish. However, if you are referencing these fields directly in your template files, they must be specified on all components/attributes.
 
-As an example, suppose you are creating a level editor and want a GUI for entity modification created with [ImGUI](https://github.com/ocornut/imgui). You could create a custom function that returns strings containing ImGUI function calls for attributes depending on their type to easily generate this entire interface. However, you notice that sometimes you use a `glm::vec3` for a position, and in other places you use it to describe an RGB colour value. In your interface, you want a slider for position and a colour wheel for a colour. You could use a custom attribute in your spec file for this:
-```json
-{
-    "name": "LightComponent",
-    "attributes": [
-        {
-            "name": "position",
-            "display_name": "Light Position",
-            "type": "glm::vec3",
-            "default": "{0.0f, 0.0f, 0.0f}",
-            "is_colour": false,
-            "drag_speed": 0.1,
-        },
-        {
-            "name": "colour",
-            "display_name": "Light Colour",
-            "type": "glm::vec3",
-            "default": "{1.0f, 1.0f, 1.0f}",
-            "is_colour": true
-        }
-    ]
-}
-```
-Then in the function you could write
+A useful trick when writing custom functions is that you could provide fields that you will never reference in templates directly, and are there for custom functions only. In this case, those fields do not necessarily need to be on all components (provided your custom functions don't assume this), and they also don't need to be strings; you can attach arbitrary JSON objects in your spec to make use of these in your custom functions.
+
+A example of this that I found useful was when generating code for a level editor. I had used datamatic to generate an [ImGUI](https://github.com/ocornut/imgui) UI for each component. This worked by writing a custom function in python that returned a string representing an ImGui function, with the specific function depending on the type of the attribute. This worked, however in some cases a `glm::vec3` (3D vector) represented a position, whereas in other cases it represented a colour. In both cases my UI was using a slider, however for the colours it would have been nicer to have a colour wheel. So I simply added `"is_colour": true` to all colour attributes. Further, for sliders, ImGUI lets you specify the drag speed, and since some attributes could be operating at differnt orders of magnitude, I wanted to be able to override this in my spec. So I also set a `"drag_speed"` field on some of my attributes, and used a defualt value for the rest. In my custom function I made use of these like so:
 ```py
-    @reg.attrmethod
-    def interface_component(ctx):
-        attr = ctx.attr
-        name = attr["name"]
-        display_name = attr["display_name"]
-        ...
-        if attr["type"] == "glm::vec3":
-            if attr["custom"].get("is_colour", False):
-                return f'ImGui::ColorEdit3("{display_name}", &component.{name})'
-            else:
-                drag_speed = attr["custom"]["drag_speed"]
-                return f'ImGui::DragFloat3("{display_name}", &component.{name}, drag_speed)'
-        ...
+@reg.attrmethod
+def interface_component(ctx):
+    attr = ctx.attr
+    name = attr["name"]
+    display_name = attr["display_name"] # This spec uses "display_name" as a field.
+    ...
+    if attr["type"] == "glm::vec3":
+        if attr.get("is_colour"):
+            return f'ImGui::ColorEdit3("{display_name}", &component.{name})'
+        drag_speed = attr.get("drag_speed", 0.1) # Gets the value if it exists, defaulting to 0.1
+        return f'ImGui::DragFloat3("{display_name}", &component.{name}, {drag_speed})'   
+    ...
 ```
-If a property is not intended to be called directly from templates, there is no need to restrict them to being strings (technically nothing is stopping you from using non-strings for accessable properties, but the generated code may be weird as the value will be stringified).
+This is a very simple example that just required a bool, but there could be other things
 
-With the ability to generate template code using the full power of python, it should be possible to generate any kind of code you want. If there are still limitations, let me know, I would love to extend datamatic further to make it more useful!
+## Afterword
+With the ability to add flags to restrict some of the generation, and the ability to add custom python functions, I believe it should be possible to generate any kind of code you want. My focus now is to look into adding more builtin functions, and to make datamatic feel more ergonomic. If I spot a "trick" that I keep having to use in places, I'll consider adding features to make those simpler to do. If anyone else spots any limitations or has suggestions for features, let me know, I would love to extend datamatic further to make it more useful!
