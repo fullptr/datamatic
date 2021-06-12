@@ -6,14 +6,9 @@ from datamatic.validator import InvalidSpecError
 import pytest
 
 
-def test_spec_missing_required_keys():
-    spec = {"components": []}
+def test_spec_missing_components_key():
     with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
-    spec = {"flag_defaults": {}}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
+        validator.run({})
 
 
 def test_validate_attribute_missing_required_key():
@@ -55,7 +50,7 @@ def test_validate_attribute_types():
 def test_validate_flags_on_object():
     # obj must be a dict
     with pytest.raises(InvalidSpecError):
-        validator.validate_flags_on_object([], set())
+        validator.validate_flags_on_object({}, set())
 
     # foo is not a valid flag
     with pytest.raises(InvalidSpecError):
@@ -104,11 +99,6 @@ def test_validate_component_types():
 
 
 def test_validator_run():
-    # doesn't have the correct keys
-    spec = {}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
     # has invalid extra keys
     spec = {"flags_defaults": {}, "components": [], "extra": []}
     with pytest.raises(InvalidSpecError):

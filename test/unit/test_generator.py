@@ -61,13 +61,10 @@ def test_process_block():
     lines = [
         r"{{Comp::name}} -> {{Comp::display_name}}"
     ]
-    spec = {
-        "flags": [],
-        "components": [
-            {"name": "first", "display_name": "1st", "attributes": []},
-            {"name": "second", "display_name": "2nd", "attributes": []}
-        ]
-    }
+    spec = [
+        {"name": "first", "display_name": "1st", "attributes": []},
+        {"name": "second", "display_name": "2nd", "attributes": []}
+    ]
     reg = method_register.MethodRegister()
     reg.load_builtins()
 
@@ -172,3 +169,25 @@ def test_empty_flag_application():
     ]
 
     assert generator.apply_flags_to_spec(spec, {}) == expected
+
+
+def test_flagless_spec():
+    spec = {
+        "components": [
+            {
+                "name": "a",
+                "attributes": []
+            },
+            {
+                "name": "b",
+                "attributes": []
+            },
+            {
+                "name": "c",
+                "attributes": []
+            },
+        ]
+    }
+    main.fill_flag_defaults(spec)
+
+    assert generator.apply_flags_to_spec(spec, {}) == spec
