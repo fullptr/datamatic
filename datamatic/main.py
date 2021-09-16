@@ -1,8 +1,10 @@
 """
 Command line parser for datamatic.
 """
+import os
 import pathlib
 import json
+import shutil
 
 from . import validator, generator, method_register
 
@@ -39,9 +41,9 @@ def main_inplace(specfile: pathlib.Path, directory: pathlib.Path):
     reg.load_from_dmx(directory)
 
     count = 0
-    for src in directory.glob("**/*.dm.*"):
-        dst = src.parent / src.name.replace(".dm.", ".")
-        if generator.run(src, dst, spec, reg):
+    for srcfile in directory.glob("**/*.dm.*"):
+        dstfile = srcfile.parent / srcfile.name.replace(".dm.", ".")
+        if generator.run(srcfile, dstfile, spec, reg):
             count += 1
 
     print(f"Done! Generated {count} files")
@@ -58,3 +60,26 @@ def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
     reg.load_builtins()
     reg.load_from_dmx(src)
 
+    if dst.exists():
+        print("Deleting old dst directory")
+        shutil.rmtree(str(dst))
+    print("Creating new dst directory")
+    os.mkdir(str(dst))
+
+    count = 0
+    plugins = set(src.glob("**/*.dmx.py"))
+    templates = set(src.glob("**/*.dm.*"))
+    for srcfile in src.glob("**/*"):
+        if srcfile in plugins:
+            continue  # Ignore plugins
+
+        if srcfile in templates:
+            dstfile = dst / srcfile.name.replace(".dm.", ".")
+            if generator.run(srcfile, dstfile, spec, reg):
+                count += 1
+        else:
+            dstfile = dst / srcfile.name
+            shutil.copy(srcfile, dstfile)
+
+    print(f"Done! Generated {count} files")
+    return count
