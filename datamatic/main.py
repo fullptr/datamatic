@@ -28,9 +28,9 @@ def fill_flag_defaults(spec):
             attr["flags"] = {**defaults, **attr_flags}
 
 
-def main(specfile: pathlib.Path, directory: pathlib.Path):
+def main_inplace(specfile: pathlib.Path, directory: pathlib.Path):
     """
-    Entry point.
+    Entry point for the inplace tool.
     """
     spec = load_spec(specfile)
 
@@ -45,3 +45,14 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
 
     print(f"Done! Generated {count} files")
     return count
+
+
+def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
+    """
+    Entry point for the package tool.
+    """
+    spec = load_spec(specfile)
+
+    reg = method_register.MethodRegister()
+    reg.load_builtins()
+    reg.load_from_dmx(src)
