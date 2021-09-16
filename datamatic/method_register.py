@@ -64,6 +64,14 @@ class MethodRegister:
         def if_not_last(ctx, token):
             return if_nth_else(ctx, -1, "", token)
 
+        @self.compmethod
+        def attr_count(ctx):
+            return str(len(ctx.comp["attributes"]))
+
+        @self.compmethod
+        def attr_list(ctx, field, separator, format="{}"):
+            return separator.join(format.format(attr[field]) for attr in ctx.comp["attributes"])
+
     def load_from_dmx(self, directory: pathlib.Path):
         """
         A function that scans the given directory for dmx files, and runs the
