@@ -29,14 +29,6 @@ class MethodRegister:
             return lambda ctx: ctx.comp[function_name]
         return lambda ctx: ctx.attr[function_name]
 
-    def __getattr__(self, attr_name):
-        if ("Comp", attr_name) in self.methods:
-            return self.methods["Comp", attr_name]
-        if ("Attr", attr_name) in self.methods:
-            return self.methods["Attr", attr_name]
-        return NotImplemented
-
-
     def load_builtins(self):
         """
         A function for loading a bunch of built in custom functions.
