@@ -28,10 +28,6 @@ class Context:
     def namespace(self):
         return "Attr" if self.attr is not None else "Comp"
 
-    @property
-    def object(self):
-        return self.attr if self.attr is not None else self.comp
-
 
 @dataclass(frozen=True)
 class Token:
