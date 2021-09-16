@@ -39,8 +39,9 @@ def main_inplace(specfile: pathlib.Path, directory: pathlib.Path):
     reg.load_from_dmx(directory)
 
     count = 0
-    for file in directory.glob("**/*.dm.*"):
-        if generator.run(file, spec, reg):
+    for src in directory.glob("**/*.dm.*"):
+        dst = src.parent / src.name.replace(".dm.", ".")
+        if generator.run(src, dst, spec, reg):
             count += 1
 
     print(f"Done! Generated {count} files")
@@ -56,3 +57,4 @@ def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
     reg = method_register.MethodRegister()
     reg.load_builtins()
     reg.load_from_dmx(src)
+

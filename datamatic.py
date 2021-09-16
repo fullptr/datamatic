@@ -67,5 +67,7 @@ if __name__ == "__main__":
     spec = args.spec
     if args.command == "inplace":
         main.main_inplace(spec, args.dir)
-    else:
+    elif args.command == "package":
         main.main_package(spec, args.src, args.dst)
+    else:
+        print("No command specified")
