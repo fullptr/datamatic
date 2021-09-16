@@ -11,11 +11,11 @@ from pathlib import Path
     ("Comp::foo('a', 'b')", Token("Comp", "foo", ("a", "b"))),
 ])
 def test_parse_token_string_success(raw, token):
-    assert token == generator.parse_token_string(raw)
+    assert token == generator.parse_token_string("file", raw)
 
 
 def test_empty_parentheses_is_valid():
-    assert generator.parse_token_string("Comp::foo()") == Token("Comp", "foo", tuple())
+    assert generator.parse_token_string("file", "Comp::foo()") == Token("Comp", "foo", tuple())
 
 
 @pytest.mark.parametrize("raw", [
@@ -26,8 +26,8 @@ def test_empty_parentheses_is_valid():
     "Comp::foo('a', 'b',)"
 ])
 def test_parse_token_string_failure(raw):
-    with pytest.raises(RuntimeError):
-        generator.parse_token_string(raw)
+    with pytest.raises(generator.GeneratorError):
+        generator.parse_token_string("file", raw)
 
 
 def test_parse_flag_value():
@@ -68,7 +68,7 @@ def test_process_block():
     reg = method_register.MethodRegister()
     reg.load_builtins()
 
-    assert generator.process_block(lines, {}, spec, reg) == "first -> 1st\nsecond -> 2nd\n"
+    assert generator.process_block("file", lines, {}, spec, reg) == "first -> 1st\nsecond -> 2nd\n"
 
 
 def test_flag_application():
