@@ -101,19 +101,25 @@ def process_block(block, flags, spec, method_register):
     out = ""
     filtered_spec = apply_flags_to_spec(spec, flags)
     for comp in filtered_spec:
-        for line in block:
+         for line in block:
+            had_comp_substitute = False
             while "{{Comp::" in line:
+                had_comp_substitute = True
                 line = TOKEN.sub(partial(replace_token, comp=comp, attr=None, spec=filtered_spec, method_register=method_register), line)
 
             if "{{Attr::" in line:
                 for attr in comp["attributes"]:
                     newline = line
+                    had_attr_substitute = False
                     while "{{Attr::" in newline:
+                        had_attr_substitute = True
                         newline = TOKEN.sub(partial(replace_token, comp=comp, attr=attr, spec=filtered_spec, method_register=method_register), newline)
 
-                    out += newline + "\n"
+                    if not (had_attr_substitute and line == ""): # If a symbol substitution resulted in an empty line, don't add it
+                        out += newline + "\n"
             else:
-                out += line + "\n"
+                if not (had_comp_substitute and line == ""):  # If a symbol substitution resulted in an empty line, don't add it
+                    out += line + "\n"
 
     return out
 
