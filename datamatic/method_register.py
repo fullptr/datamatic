@@ -29,6 +29,14 @@ class MethodRegister:
             return lambda ctx: ctx.comp[function_name]
         return lambda ctx: ctx.attr[function_name]
 
+    def __getattr__(self, attr_name):
+        if ("Comp", attr_name) in self.methods:
+            return self.methods["Comp", attr_name]
+        if ("Attr", attr_name) in self.methods:
+            return self.methods["Attr", attr_name]
+        return NotImplemented
+
+
     def load_builtins(self):
         """
         A function for loading a bunch of built in custom functions.
@@ -63,6 +71,14 @@ class MethodRegister:
         @self.attrmethod
         def if_not_last(ctx, token):
             return if_nth_else(ctx, -1, "", token)
+
+        @self.compmethod
+        def attr_count(ctx):
+            return str(len(ctx.comp["attributes"]))
+
+        @self.compmethod
+        def attr_list(ctx, field, separator, format="{}"):
+            return separator.join(format.format(attr[field]) for attr in ctx.comp["attributes"])
 
     def load_from_dmx(self, directory: pathlib.Path):
         """

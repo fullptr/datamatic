@@ -9,6 +9,15 @@ import ast
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
 
 
+class GeneratorError(Exception):
+    def __init__(self, file, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.file = file
+
+    def __str__(self):
+        return f"[{self.file}] {super().__str__()}"
+
+
 @dataclass
 class Context:
     spec: list
@@ -19,6 +28,10 @@ class Context:
     def namespace(self):
         return "Attr" if self.attr is not None else "Comp"
 
+    @property
+    def object(self):
+        return self.attr if self.attr is not None else self.comp
+
 
 @dataclass(frozen=True)
 class Token:
@@ -27,7 +40,7 @@ class Token:
     args: Tuple[str]
 
 
-def parse_token_string(raw_string: str) -> Token:
+def parse_token_string(file, raw_string: str) -> Token:
     """
     Format:
     ("Comp"|"Attr") "::" function_name ["(" <args> ")"]
@@ -38,17 +51,21 @@ def parse_token_string(raw_string: str) -> Token:
     """
     try:
         namespace, rest = raw_string.split("::")
-        if result := parse.parse("{}({})", rest):
-            function_name = result[0]
-            args = tuple(ast.literal_eval(result[1]))
-        elif result := parse.parse("{}()", rest):
-            function_name = result[0]
-            args = tuple()
-        else:
-            function_name = rest
-            args = tuple()
     except ValueError as e:
-        raise RuntimeError(f"Error: {e}, {raw_string=}") from e
+        raise GeneratorError(file, f"Invalid token: {e}, {raw_string=}")
+
+    if result := parse.parse("{}({})", rest):
+        function_name = result[0]
+        try:
+            args = tuple(ast.literal_eval(result[1]))
+        except SyntaxError:
+            raise GeneratorError(file, f"Could not parse arg list ({result[1]}) for function {function_name}")
+    elif result := parse.parse("{}()", rest):
+        function_name = result[0]
+        args = tuple()
+    else:
+        function_name = rest
+        args = tuple()
 
     return Token(
         namespace=namespace,
@@ -86,26 +103,26 @@ def apply_flags_to_spec(spec, flags):
     return components
 
 
-def replace_token(matchobj, comp, attr, spec, method_register):
+def replace_token(matchobj, file, comp, attr, spec, method_register):
     """
     Parse the replacement token in the matchobj to figure out the namespace, function name
     and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
-    token = parse_token_string(matchobj.group(1))
+    token = parse_token_string(file, matchobj.group(1))
     function = method_register.get(token.namespace, token.function_name)
     ctx = Context(spec=spec, comp=comp, attr=attr)
     return function(ctx, *token.args)
 
 
-def process_block(block, flags, spec, method_register):
+def process_block(file, block, flags, spec, method_register):
     out = ""
     filtered_spec = apply_flags_to_spec(spec, flags)
     for comp in filtered_spec:
-         for line in block:
+        for line in block:
             had_comp_substitute = False
             while "{{Comp::" in line:
                 had_comp_substitute = True
-                line = TOKEN.sub(partial(replace_token, comp=comp, attr=None, spec=filtered_spec, method_register=method_register), line)
+                line = TOKEN.sub(partial(replace_token, file=file, comp=comp, attr=None, spec=filtered_spec, method_register=method_register), line)
 
             if "{{Attr::" in line:
                 for attr in comp["attributes"]:
@@ -113,7 +130,7 @@ def process_block(block, flags, spec, method_register):
                     had_attr_substitute = False
                     while "{{Attr::" in newline:
                         had_attr_substitute = True
-                        newline = TOKEN.sub(partial(replace_token, comp=comp, attr=attr, spec=filtered_spec, method_register=method_register), newline)
+                        newline = TOKEN.sub(partial(replace_token, file=file, comp=comp, attr=attr, spec=filtered_spec, method_register=method_register), newline)
 
                     if not (had_attr_substitute and line == ""): # If a symbol substitution resulted in an empty line, don't add it
                         out += newline + "\n"
@@ -159,7 +176,7 @@ def run(src, spec, method_register):
             if line.startswith("DATAMATIC_BEGIN"):
                 raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")
             if line.startswith("DATAMATIC_END"):
-                out += process_block(block, flags, spec, method_register)
+                out += process_block(src, block, flags, spec, method_register)
                 in_block = False
                 block = []
                 flags = set()
