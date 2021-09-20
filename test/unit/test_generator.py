@@ -61,10 +61,12 @@ def test_process_block():
     lines = [
         r"{{Comp::name}} -> {{Comp::display_name}}"
     ]
-    spec = [
-        {"name": "first", "display_name": "1st", "attributes": []},
-        {"name": "second", "display_name": "2nd", "attributes": []}
-    ]
+    spec = {
+        "components": [
+            {"name": "first", "display_name": "1st", "attributes": []},
+            {"name": "second", "display_name": "2nd", "attributes": []}
+        ]
+    }
     reg = method_register.MethodRegister()
     reg.load_builtins()
 
