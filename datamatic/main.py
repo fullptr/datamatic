@@ -67,10 +67,10 @@ def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
     os.mkdir(str(dst))
 
     count = 0
-    plugins = set(src.glob("**/*.dmx.py"))
+    ignore = set(src.glob("**/*.dmx.py")) | set(src.glob("**/*.pyc"))
     templates = set(src.glob("**/*.dm.*"))
     for srcfile in src.glob("**/*"):
-        if srcfile in plugins:
+        if srcfile in ignore:
             continue  # Ignore plugins
 
         if srcfile in templates:
@@ -79,7 +79,10 @@ def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
                 count += 1
         else:
             dstfile = dst / srcfile.name
-            shutil.copy(srcfile, dstfile)
+            try:
+                shutil.copy(srcfile, dstfile)
+            except PermissionError:
+                pass
 
     print(f"Done! Generated {count} files")
     return count
