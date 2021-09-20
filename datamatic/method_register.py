@@ -7,6 +7,8 @@ import pathlib
 import importlib.util
 from functools import partialmethod
 
+from . import utilities
+
 
 class MethodRegister:
     def __init__(self):
@@ -39,8 +41,10 @@ class MethodRegister:
         def if_nth_else(ctx, n: int, yes_token: str, no_token:str) -> str:
             try:
                 if ctx.namespace == "Comp":
-                    return yes_token if ctx.comp == ctx.spec[n] else no_token
-                return yes_token if ctx.attr == ctx.comp["attributes"][n] else no_token
+                    comps = utilities.filter_flags(ctx.spec["components"], ctx.flags)
+                    return yes_token if ctx.comp == comps[n] else no_token
+                attrs = utilities.filter_flags(ctx.comp["attributes"], ctx.flags)
+                return yes_token if ctx.attr == attrs[n] else no_token
             except IndexError:
                 return no_token
 
@@ -66,11 +70,13 @@ class MethodRegister:
 
         @self.compmethod
         def attr_count(ctx):
-            return str(len(ctx.comp["attributes"]))
+            attrs = utilities.filter_flags(ctx.comp["attributes"], ctx.flags)
+            return str(len(attrs))
 
         @self.compmethod
         def attr_list(ctx, field, separator, format="{}"):
-            return separator.join(format.format(attr[field]) for attr in ctx.comp["attributes"])
+            attrs = utilities.filter_flags(ctx.comp["attributes"], ctx.flags)
+            return separator.join(format.format(attr[field]) for attr in attrs)
 
     def load_from_dmx(self, directory: pathlib.Path):
         """
