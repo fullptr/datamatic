@@ -25,7 +25,7 @@ def copy_file(src_dir: Path, out_dir: Path, filename: str, new_filename: Optiona
     assert new_file.exists()
 
 
-def test_end_to_end_simple(src_path, tmp_path):
+def test_end_to_end_inplace(src_path, tmp_path):
     """
     Creates a temporary directory and copies the template file. Run datamatic on the directory
     and verify that a new file as been created with the same contents as the expected file.
@@ -37,7 +37,7 @@ def test_end_to_end_simple(src_path, tmp_path):
     copy_file(src_path, tmp_path, "custom_functions.dmx.py")
 
     specfile = src_path / "component_spec.json"
-    assert main.main(specfile, tmp_path) == 1  # Assert one file is generated
+    assert main.main_inplace(specfile, tmp_path) == 1  # Assert one file is generated
 
     expected_file = src_path / "expected.cpp"
     actual_file = tmp_path / "actual.cpp"
@@ -59,4 +59,4 @@ def test_file_is_not_rewritten_if_no_change(src_path, tmp_path):
     copy_file(src_path, tmp_path, "expected.cpp", "actual.cpp")
 
     specfile = src_path / "component_spec.json"
-    assert main.main(specfile, tmp_path) == 0
+    assert main.main_inplace(specfile, tmp_path) == 0

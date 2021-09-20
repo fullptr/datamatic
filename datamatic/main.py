@@ -1,8 +1,10 @@
 """
 Command line parser for datamatic.
 """
+import os
 import pathlib
 import json
+import shutil
 
 from . import validator, generator, method_register
 
@@ -28,9 +30,9 @@ def fill_flag_defaults(spec):
             attr["flags"] = {**defaults, **attr_flags}
 
 
-def main(specfile: pathlib.Path, directory: pathlib.Path):
+def main_inplace(specfile: pathlib.Path, directory: pathlib.Path):
     """
-    Entry point.
+    Entry point for the inplace tool.
     """
     spec = load_spec(specfile)
 
@@ -39,9 +41,48 @@ def main(specfile: pathlib.Path, directory: pathlib.Path):
     reg.load_from_dmx(directory)
 
     count = 0
-    for file in directory.glob("**/*.dm.*"):
-        if generator.run(file, spec, reg):
+    for srcfile in directory.glob("**/*.dm.*"):
+        dstfile = srcfile.parent / srcfile.name.replace(".dm.", ".")
+        if generator.run(srcfile, dstfile, spec, reg):
             count += 1
+
+    print(f"Done! Generated {count} files")
+    return count
+
+
+def main_package(specfile: pathlib.Path, src: pathlib.Path, dst: pathlib.Path):
+    """
+    Entry point for the package tool.
+    """
+    spec = load_spec(specfile)
+
+    reg = method_register.MethodRegister()
+    reg.load_builtins()
+    reg.load_from_dmx(src)
+
+    if dst.exists():
+        print("Deleting old dst directory")
+        shutil.rmtree(str(dst))
+    print("Creating new dst directory")
+    os.mkdir(str(dst))
+
+    count = 0
+    ignore = set(src.glob("**/*.dmx.py")) | set(src.glob("**/*.pyc"))
+    templates = set(src.glob("**/*.dm.*"))
+    for srcfile in src.glob("**/*"):
+        if srcfile in ignore:
+            continue  # Ignore plugins
+
+        if srcfile in templates:
+            dstfile = dst / srcfile.name.replace(".dm.", ".")
+            if generator.run(srcfile, dstfile, spec, reg):
+                count += 1
+        else:
+            dstfile = dst / srcfile.name
+            try:
+                shutil.copy(srcfile, dstfile)
+            except PermissionError:
+                pass
 
     print(f"Done! Generated {count} files")
     return count

@@ -155,9 +155,7 @@ def parse_flags(flags):
     return parsed_flags
 
 
-def run(src, spec, method_register):
-    dst = src.parent / src.name.replace(".dm.", ".")
-
+def run(src, dst, spec, method_register):
     with src.open() as srcfile:
         lines = srcfile.readlines()
 

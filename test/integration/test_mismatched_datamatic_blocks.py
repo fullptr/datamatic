@@ -28,4 +28,4 @@ def test_mismatched_datamatic_blocks():
 
     # THEN
     with pytest.raises(RuntimeError):
-        main.main(specfile, pathlib.Path(out_dir))
+        main.main_inplace(specfile, pathlib.Path(out_dir))
