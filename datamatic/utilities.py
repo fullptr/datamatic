@@ -7,10 +7,11 @@ well as being made available to plugins.
 def flag_match(obj, flags):
     """
     Given a component or attribute, return true if it matches all of the given flags
-    and False otherwise.
+    and False otherwise. If there are no flags, always return True.
     """
-    assert "flags" in obj
-    return all(obj['flags'][key] == value for key, value in flags.items())
+    if "flags" in obj:
+        return all(obj['flags'][key] == value for key, value in flags.items())
+    return True
 
 
 def filter_flags(obj_list, flags):
