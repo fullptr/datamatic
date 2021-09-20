@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from functools import partial
 import parse
 import ast
+from . import utilities
 
 
 TOKEN = re.compile(r"\{\{(.*?)\}\}")
@@ -23,6 +24,7 @@ class Context:
     spec: list
     comp: dict
     attr: Optional[dict]  # Only populated for attrmethods
+    flags: dict
 
     @property
     def namespace(self):
@@ -99,34 +101,55 @@ def apply_flags_to_spec(spec, flags):
     return components
 
 
-def replace_token(matchobj, file, comp, attr, spec, method_register):
+def replace_token(matchobj, file, comp, attr, spec, flags, method_register):
     """
     Parse the replacement token in the matchobj to figure out the namespace, function name
     and any args provided. Get the function and then pass the comp/attr and any extra arguments.
     """
     token = parse_token_string(file, matchobj.group(1))
     function = method_register.get(token.namespace, token.function_name)
-    ctx = Context(spec=spec, comp=comp, attr=attr)
+    ctx = Context(spec=spec, comp=comp, attr=attr, flags=flags)
     return function(ctx, *token.args)
 
 
 def process_block(file, block, flags, spec, method_register):
     out = ""
-    filtered_spec = apply_flags_to_spec(spec, flags)
-    for comp in filtered_spec:
+    for comp in spec["components"]:
+        if not utilities.flag_match(comp, flags):
+            continue
+
         for line in block:
             had_comp_substitute = False
             while "{{Comp::" in line:
                 had_comp_substitute = True
-                line = TOKEN.sub(partial(replace_token, file=file, comp=comp, attr=None, spec=filtered_spec, method_register=method_register), line)
+                line = TOKEN.sub(partial(
+                    replace_token,
+                    file=file,
+                    comp=comp,
+                    attr=None,
+                    spec=spec,
+                    flags=flags,
+                    method_register=method_register
+                ), line)
 
             if "{{Attr::" in line:
                 for attr in comp["attributes"]:
+                    if not utilities.flag_match(attr, flags):
+                        continue
+
                     newline = line
                     had_attr_substitute = False
                     while "{{Attr::" in newline:
                         had_attr_substitute = True
-                        newline = TOKEN.sub(partial(replace_token, file=file, comp=comp, attr=attr, spec=filtered_spec, method_register=method_register), newline)
+                        newline = TOKEN.sub(partial(
+                            replace_token,
+                            file=file,
+                            comp=comp,
+                            attr=attr,
+                            spec=spec,
+                            flags=flags,
+                            method_register=method_register
+                        ), newline)
 
                     if not (had_attr_substitute and line == ""): # If a symbol substitution resulted in an empty line, don't add it
                         out += newline + "\n"
