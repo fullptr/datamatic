@@ -64,10 +64,6 @@ def run(spec):
     Runs the validator against the given spec, raising an exception if there
     is an error in the schema.
     """
-    for key in spec:
-        if key not in {"flag_defaults", "components"}:
-            raise InvalidSpecError(f"Spec has invalid top-level key: {key}")
-            
     flag_names: Optional[set[str]] = None
     if spec_flags := spec.get("flag_defaults"):
         assert_type(spec_flags, dict)
