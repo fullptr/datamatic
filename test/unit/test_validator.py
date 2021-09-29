@@ -98,19 +98,6 @@ def test_validate_component_types():
         validator.validate_component(comp, [])
 
 
-def test_validator_run():
-    # has invalid extra keys
-    spec = {"flags_defaults": {}, "components": [], "extra": []}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
-
-def test_validator_flags_must_be_a_list():
-    spec = {"flags_defaults": None, "components": []}
-    with pytest.raises(InvalidSpecError):
-        validator.run(spec)
-
-
 def test_validator_components_must_be_a_list():
     spec = {"flags_defaults": {}, "components": None}
     with pytest.raises(InvalidSpecError):

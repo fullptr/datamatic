@@ -189,6 +189,18 @@ def run(src, dst, spec, method_register):
     for line in lines:
         line = line.rstrip()
 
+        # Globals can appear on any line, outside of Datamatic blocks
+        while "{{Global::" in line:
+            line = TOKEN.sub(partial(
+                replace_token,
+                file=src,
+                comp=None,
+                attr=None,
+                spec=spec,
+                flags=flags,
+                method_register=method_register
+            ), line)
+
         if in_block:
             if line.startswith("DATAMATIC_BEGIN"):
                 raise RuntimeError("Tried to begin a datamatic block while in another, cannot be nested")

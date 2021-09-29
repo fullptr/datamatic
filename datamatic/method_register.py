@@ -23,10 +23,13 @@ class MethodRegister:
 
     compmethod = partialmethod(register_method, namespace="Comp")
     attrmethod = partialmethod(register_method, namespace="Attr")
+    globalmethod = partialmethod(register_method, namespace="Global")
 
     def get(self, namespace, function_name):
         if (namespace, function_name) in self.methods:
             return self.methods[namespace, function_name]
+        if namespace == "Global":
+            return lambda ctx: ctx.spec[function_name]
         if namespace == "Comp":
             return lambda ctx: ctx.comp[function_name]
         return lambda ctx: ctx.attr[function_name]
